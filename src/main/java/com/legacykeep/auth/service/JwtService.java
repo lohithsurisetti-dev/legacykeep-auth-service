@@ -225,6 +225,12 @@ public class JwtService {
                         return (String[]) rolesObj;
                     } else if (rolesObj instanceof String) {
                         return new String[]{(String) rolesObj};
+                    } else if (rolesObj instanceof java.util.List) {
+                        @SuppressWarnings("unchecked")
+                        java.util.List<Object> rolesList = (java.util.List<Object>) rolesObj;
+                        return rolesList.stream()
+                                .map(Object::toString)
+                                .toArray(String[]::new);
                     }
                     return new String[0];
                 });
