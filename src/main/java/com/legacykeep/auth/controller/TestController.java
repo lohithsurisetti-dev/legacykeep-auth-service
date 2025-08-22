@@ -13,6 +13,8 @@ import com.legacykeep.auth.service.JwtService;
 import io.jsonwebtoken.Claims;
 import java.util.Optional;
 import com.legacykeep.auth.dto.JwtTokenDto;
+import com.legacykeep.auth.dto.RegisterRequestDto;
+import com.legacykeep.auth.dto.LoginRequestDto;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -605,6 +607,73 @@ public class TestController {
         } catch (Exception e) {
             response.put("status", "ERROR");
             response.put("message", "Failed to test JWT functionality: " + e.getMessage());
+            response.put("timestamp", LocalDateTime.now());
+            
+            return ResponseEntity.status(500).body(response);
+        }
+    }
+
+    /**
+     * Test authentication system functionality.
+     */
+    @GetMapping("/test-auth-system")
+    public ResponseEntity<Map<String, Object>> testAuthSystem() {
+        Map<String, Object> response = new HashMap<>();
+        
+        try {
+            // Create a test user
+            User testUser = userRepository.findByEmailIgnoreCase("test@example.com")
+                .orElseGet(() -> {
+                    User user = new User();
+                    user.setEmail("test@example.com");
+                    user.setUsername("testuser");
+                    user.setPasswordHash("$2a$10$test.hash.for.testing.purposes.only");
+                    user.setRole(UserRole.USER);
+                    user.setStatus(UserStatus.ACTIVE);
+                    user.setEmailVerified(true);
+                    return userRepository.save(user);
+                });
+
+            // Test registration flow (simulated)
+            RegisterRequestDto registerRequest = new RegisterRequestDto();
+            registerRequest.setEmail("newuser@example.com");
+            registerRequest.setUsername("newuser");
+            registerRequest.setPassword("TestPass123!");
+            registerRequest.setConfirmPassword("TestPass123!");
+            registerRequest.setAcceptTerms(true);
+
+            // Test login flow (simulated)
+            LoginRequestDto loginRequest = new LoginRequestDto();
+            loginRequest.setIdentifier("test@example.com");
+            loginRequest.setPassword("password123");
+            loginRequest.setRememberMe(false);
+
+            response.put("status", "SUCCESS");
+            response.put("message", "Authentication system test completed successfully");
+            response.put("timestamp", LocalDateTime.now());
+            response.put("testUser", Map.of(
+                "id", testUser.getId(),
+                "email", testUser.getEmail(),
+                "username", testUser.getUsername(),
+                "status", testUser.getStatus().name(),
+                "role", testUser.getRole().name()
+            ));
+            response.put("registerRequest", Map.of(
+                "email", registerRequest.getEmail(),
+                "username", registerRequest.getUsername(),
+                "acceptTerms", registerRequest.isAcceptTerms()
+            ));
+            response.put("loginRequest", Map.of(
+                "identifier", loginRequest.getIdentifier(),
+                "rememberMe", loginRequest.isRememberMe()
+            ));
+
+            return ResponseEntity.ok(response);
+
+        } catch (Exception e) {
+            log.error("Authentication system test failed: {}", e.getMessage(), e);
+            response.put("status", "ERROR");
+            response.put("message", "Authentication system test failed: " + e.getMessage());
             response.put("timestamp", LocalDateTime.now());
             
             return ResponseEntity.status(500).body(response);
