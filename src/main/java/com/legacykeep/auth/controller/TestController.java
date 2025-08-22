@@ -8,6 +8,8 @@ import com.legacykeep.auth.entity.AuditSeverity;
 import com.legacykeep.auth.repository.UserRepository;
 import com.legacykeep.auth.repository.UserSessionRepository;
 import com.legacykeep.auth.repository.AuditLogRepository;
+import com.legacykeep.auth.service.JwtService;
+import com.legacykeep.auth.dto.JwtTokenDto;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -36,6 +38,9 @@ public class TestController {
 
     @Autowired
     private AuditLogRepository auditLogRepository;
+
+    @Autowired
+    private JwtService jwtService;
 
     /**
      * Test database connection and basic operations.
@@ -528,6 +533,73 @@ public class TestController {
         } catch (Exception e) {
             response.put("status", "ERROR");
             response.put("message", "Failed to test audit log validation: " + e.getMessage());
+            response.put("timestamp", LocalDateTime.now());
+            
+            return ResponseEntity.status(500).body(response);
+        }
+    }
+
+    /**
+     * Test JWT token generation and validation.
+     */
+    @GetMapping("/test-jwt")
+    public ResponseEntity<Map<String, Object>> testJwt() {
+        Map<String, Object> response = new HashMap<>();
+        
+        try {
+            // First, ensure we have a test user
+            User testUser = userRepository.findByEmailIgnoreCase("test@legacykeep.com")
+                .orElseGet(() -> {
+                    User user = new User();
+                    user.setEmail("test@legacykeep.com");
+                    user.setUsername("testuser");
+                    user.setPasswordHash("$2a$10$test.hash.for.testing.purposes.only");
+                    user.setStatus(UserStatus.ACTIVE);
+                    user.setEmailVerified(true);
+                    return userRepository.save(user);
+                });
+
+            // Generate JWT tokens
+            JwtTokenDto tokens = jwtService.generateTokens(
+                testUser, 
+                "Test Device - MacBook Pro", 
+                "127.0.0.1", 
+                "San Francisco, CA", 
+                false
+            );
+
+            // Validate the access token
+            var claimsOpt = jwtService.validateAndExtractClaims(tokens.getAccessToken());
+            boolean isValid = claimsOpt.isPresent();
+            
+            // Extract information from token
+            var userIdOpt = jwtService.extractUserId(tokens.getAccessToken());
+            var emailOpt = jwtService.extractEmail(tokens.getAccessToken());
+            var rolesOpt = jwtService.extractRoles(tokens.getAccessToken());
+            var sessionIdOpt = jwtService.extractSessionId(tokens.getAccessToken());
+
+            response.put("status", "SUCCESS");
+            response.put("message", "JWT token generation and validation test completed");
+            response.put("timestamp", LocalDateTime.now());
+            response.put("tokens", tokens);
+            response.put("tokenValidation", Map.of(
+                "isValid", isValid,
+                "userId", userIdOpt.orElse(null),
+                "email", emailOpt.orElse(null),
+                "roles", rolesOpt.orElse(new String[0]),
+                "sessionId", sessionIdOpt.orElse(null)
+            ));
+            response.put("testUser", Map.of(
+                "id", testUser.getId(),
+                "email", testUser.getEmail(),
+                "username", testUser.getUsername(),
+                "role", testUser.getRole().name()
+            ));
+            
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            response.put("status", "ERROR");
+            response.put("message", "Failed to test JWT functionality: " + e.getMessage());
             response.put("timestamp", LocalDateTime.now());
             
             return ResponseEntity.status(500).body(response);
