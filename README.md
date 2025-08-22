@@ -89,6 +89,20 @@ mvn clean package
 docker-compose up auth-service
 ```
 
+## 📚 Documentation
+
+This project includes comprehensive documentation for the authentication system:
+
+- **[JWT Authentication System](docs/JWT_AUTHENTICATION_SYSTEM.md)** - Complete guide to JWT implementation
+- **[JWT Quick Reference](docs/JWT_QUICK_REFERENCE.md)** - Developer quick reference
+- **[Documentation Index](docs/README.md)** - Complete documentation overview
+
+### 🚀 Quick Start for Developers
+
+1. **Read the [JWT Quick Reference](docs/JWT_QUICK_REFERENCE.md)** for common operations
+2. **Review the [JWT Authentication System](docs/JWT_AUTHENTICATION_SYSTEM.md)** for complete understanding
+3. **Check the [Documentation Index](docs/README.md)** for all available guides
+
 ## API Endpoints
 
 ### Authentication Endpoints
