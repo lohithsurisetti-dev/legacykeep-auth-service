@@ -37,6 +37,7 @@ public class JwtService {
 
     private final JwtConfig jwtConfig;
     private final UserSessionRepository userSessionRepository;
+    private TokenBlacklistService tokenBlacklistService; // Lazy injection to avoid circular dependency
 
     /**
      * Generate JWT tokens for user authentication.
@@ -337,8 +338,16 @@ public class JwtService {
      * Check if token is blacklisted.
      */
     private boolean isTokenBlacklisted(String token) {
-        // TODO: Implement Redis-based token blacklisting
-        // For now, return false
+        if (tokenBlacklistService != null) {
+            return tokenBlacklistService.isTokenBlacklisted(token);
+        }
         return false;
+    }
+
+    /**
+     * Set token blacklist service (for lazy injection).
+     */
+    public void setTokenBlacklistService(TokenBlacklistService tokenBlacklistService) {
+        this.tokenBlacklistService = tokenBlacklistService;
     }
 }
