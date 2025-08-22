@@ -1,6 +1,7 @@
 package com.legacykeep.auth.controller;
 
 import com.legacykeep.auth.entity.User;
+import com.legacykeep.auth.entity.UserRole;
 import com.legacykeep.auth.entity.UserStatus;
 import com.legacykeep.auth.entity.UserSession;
 import com.legacykeep.auth.entity.AuditLog;
@@ -9,7 +10,10 @@ import com.legacykeep.auth.repository.UserRepository;
 import com.legacykeep.auth.repository.UserSessionRepository;
 import com.legacykeep.auth.repository.AuditLogRepository;
 import com.legacykeep.auth.service.JwtService;
+import io.jsonwebtoken.Claims;
+import java.util.Optional;
 import com.legacykeep.auth.dto.JwtTokenDto;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -26,6 +30,7 @@ import java.util.Map;
  * @author LegacyKeep Team
  * @version 1.0.0
  */
+@Slf4j
 @RestController
 @RequestMapping("/api/v1/test")
 public class TestController {
@@ -600,6 +605,72 @@ public class TestController {
         } catch (Exception e) {
             response.put("status", "ERROR");
             response.put("message", "Failed to test JWT functionality: " + e.getMessage());
+            response.put("timestamp", LocalDateTime.now());
+            
+            return ResponseEntity.status(500).body(response);
+        }
+    }
+
+    /**
+     * Test refresh token functionality.
+     */
+    @GetMapping("/test-refresh-token")
+    public ResponseEntity<Map<String, Object>> testRefreshToken() {
+        Map<String, Object> response = new HashMap<>();
+        
+        try {
+            // Create a test user
+            User testUser = userRepository.findByEmailIgnoreCase("test@example.com")
+                .orElseGet(() -> {
+                    User user = new User();
+                    user.setEmail("test@example.com");
+                    user.setUsername("testuser");
+                    user.setPasswordHash("$2a$10$test.hash.for.testing.purposes.only");
+                    user.setRole(UserRole.USER);
+                    user.setStatus(UserStatus.ACTIVE);
+                    user.setEmailVerified(true);
+                    return userRepository.save(user);
+                });
+
+            // Generate initial tokens
+            JwtTokenDto initialTokens = jwtService.generateTokens(
+                testUser, 
+                "Test Device", 
+                "127.0.0.1", 
+                "Test Location", 
+                false
+            );
+
+            // Test refresh token flow
+            Optional<JwtTokenDto> refreshedTokens = jwtService.refreshAccessToken(
+                initialTokens.getRefreshToken(),
+                "Test Device",
+                "127.0.0.1"
+            );
+
+            response.put("status", "SUCCESS");
+            response.put("message", "Refresh token test completed successfully");
+            response.put("initialTokens", initialTokens);
+            response.put("refreshSuccessful", refreshedTokens.isPresent());
+            
+            if (refreshedTokens.isPresent()) {
+                response.put("refreshedTokens", refreshedTokens.get());
+                
+                // Validate new tokens
+                Optional<Claims> newAccessClaims = jwtService.validateAndExtractClaims(refreshedTokens.get().getAccessToken());
+                Optional<Claims> newRefreshClaims = jwtService.validateAndExtractClaims(refreshedTokens.get().getRefreshToken());
+                
+                response.put("newAccessTokenValid", newAccessClaims.isPresent());
+                response.put("newRefreshTokenValid", newRefreshClaims.isPresent());
+                response.put("tokenRotated", !initialTokens.getRefreshToken().equals(refreshedTokens.get().getRefreshToken()));
+            }
+
+            return ResponseEntity.ok(response);
+
+        } catch (Exception e) {
+            log.error("Refresh token test failed: {}", e.getMessage(), e);
+            response.put("status", "ERROR");
+            response.put("message", "Refresh token test failed: " + e.getMessage());
             response.put("timestamp", LocalDateTime.now());
             
             return ResponseEntity.status(500).body(response);

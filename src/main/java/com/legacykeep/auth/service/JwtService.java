@@ -257,11 +257,20 @@ public class JwtService {
 
     /**
      * Refresh access token using refresh token.
+     * 
+     * This method implements the refresh token flow:
+     * 1. Validates the refresh token
+     * 2. Checks if the session is still active
+     * 3. Generates a new access token (short-lived)
+     * 4. Optionally rotates the refresh token for security
+     * 5. Updates the session with new token information
      */
-    public Optional<JwtTokenDto> refreshAccessToken(String refreshToken) {
+    public Optional<JwtTokenDto> refreshAccessToken(String refreshToken, String deviceInfo, String ipAddress) {
         try {
+            // Validate refresh token
             Optional<Claims> claimsOpt = validateAndExtractClaims(refreshToken);
             if (claimsOpt.isEmpty()) {
+                log.warn("Invalid refresh token provided");
                 return Optional.empty();
             }
 
@@ -273,32 +282,146 @@ public class JwtService {
                 return Optional.empty();
             }
 
-            // Find the session in database
+            // Extract session information
             String sessionId = claims.get("sessionId", String.class);
-            Optional<UserSession> sessionOpt = userSessionRepository.findByRefreshToken(refreshToken);
+            Long userId = claims.get("userId", Long.class);
             
+            if (sessionId == null || userId == null) {
+                log.warn("Missing session ID or user ID in refresh token");
+                return Optional.empty();
+            }
+
+            // Find the session in database
+            Optional<UserSession> sessionOpt = userSessionRepository.findByRefreshToken(refreshToken);
             if (sessionOpt.isEmpty()) {
-                log.warn("Session not found for refresh token");
+                log.warn("Session not found for refresh token: {}", sessionId);
                 return Optional.empty();
             }
 
             UserSession session = sessionOpt.get();
             
-            // Check if session is still valid
+            // Validate session
             if (!session.isValid()) {
-                log.warn("Session is no longer valid for refresh");
+                log.warn("Session is no longer valid for refresh: {}", sessionId);
                 return Optional.empty();
             }
 
-            // TODO: Get user from database using session.getUserId()
-            // For now, we'll return empty as we need User entity
+            if (session.isExpired()) {
+                log.warn("Session has expired: {}", sessionId);
+                return Optional.empty();
+            }
+
+            // Check if refresh token is blacklisted
+            if (isTokenBlacklisted(refreshToken)) {
+                log.warn("Refresh token is blacklisted: {}", sessionId);
+                return Optional.empty();
+            }
+
+            // TODO: Get user from database using userId
+            // For now, we'll create a minimal user object for token generation
+            // In production, this should fetch from UserRepository
+            User user = new User();
+            user.setId(userId);
+            user.setEmail(claims.getSubject());
+            user.setUsername(claims.get("username", String.class));
+            user.setRole(com.legacykeep.auth.entity.UserRole.USER); // Default role
+
+            // Generate new access token (short-lived)
+            LocalDateTime now = LocalDateTime.now();
+            LocalDateTime accessTokenExpiresAt = now.plusMinutes(jwtConfig.getAccessTokenExpirationMinutes());
+            String newAccessToken = generateAccessToken(user, sessionId, accessTokenExpiresAt);
+
+            // Check if we should rotate refresh token (security best practice)
+            boolean shouldRotateRefreshToken = shouldRotateRefreshToken(session);
+            String newRefreshToken = null;
+            LocalDateTime newRefreshExpiresAt = null;
+
+            if (shouldRotateRefreshToken) {
+                // Generate new refresh token (long-lived)
+                newRefreshExpiresAt = session.isRememberMe() ? 
+                    now.plusDays(jwtConfig.getRememberMeExpirationDays()) : 
+                    now.plusDays(jwtConfig.getRefreshTokenExpirationDays());
+                newRefreshToken = generateRefreshToken(user, sessionId, newRefreshExpiresAt);
+                
+                // Blacklist old refresh token
+                if (tokenBlacklistService != null) {
+                    tokenBlacklistService.blacklistToken(refreshToken);
+                }
+            }
+
+            // Update session
+            session.setSessionToken(newAccessToken);
+            session.setLastUsedAt(now);
+            session.setIpAddress(ipAddress);
             
-            return Optional.empty();
+            if (newRefreshToken != null) {
+                session.setRefreshToken(newRefreshToken);
+                session.setExpiresAt(newRefreshExpiresAt);
+            }
+
+            UserSession updatedSession = userSessionRepository.save(session);
+
+            // Build response
+            JwtTokenDto.JwtTokenDtoBuilder builder = JwtTokenDto.builder()
+                    .accessToken(newAccessToken)
+                    .tokenType("Bearer")
+                    .expiresIn(jwtConfig.getAccessTokenExpirationMinutes() * 60L)
+                    .userId(user.getId())
+                    .email(user.getEmail())
+                    .username(user.getUsername())
+                    .roles(new String[]{user.getRole().name()})
+                    .sessionId(updatedSession.getId())
+                    .rememberMe(session.isRememberMe())
+                    .issuedAt(now)
+                    .expiresAt(accessTokenExpiresAt)
+                    .deviceInfo(deviceInfo)
+                    .ipAddress(ipAddress);
+
+            // Include new refresh token if rotated
+            if (newRefreshToken != null) {
+                builder.refreshToken(newRefreshToken)
+                       .refreshExpiresIn((newRefreshExpiresAt.toEpochSecond(java.time.ZoneOffset.UTC) - now.toEpochSecond(java.time.ZoneOffset.UTC)));
+            } else {
+                builder.refreshToken(refreshToken)
+                       .refreshExpiresIn((session.getExpiresAt().toEpochSecond(java.time.ZoneOffset.UTC) - now.toEpochSecond(java.time.ZoneOffset.UTC)));
+            }
+
+            log.info("Successfully refreshed access token for user: {} session: {}", userId, sessionId);
+            return Optional.of(builder.build());
 
         } catch (Exception e) {
             log.error("Error refreshing access token: {}", e.getMessage(), e);
             return Optional.empty();
         }
+    }
+
+    /**
+     * Determine if refresh token should be rotated for security.
+     * 
+     * Refresh token rotation is a security best practice that:
+     * - Prevents refresh token reuse attacks
+     * - Limits the window of opportunity for token theft
+     * - Provides better session management
+     */
+    private boolean shouldRotateRefreshToken(UserSession session) {
+        // Rotate if token is older than 24 hours (configurable)
+        LocalDateTime rotationThreshold = LocalDateTime.now().minusHours(24);
+        
+        // Rotate if session was created more than 24 hours ago
+        if (session.getCreatedAt().isBefore(rotationThreshold)) {
+            return true;
+        }
+
+        // Rotate if it's been more than 7 days since last rotation
+        if (session.getLastUsedAt() != null && 
+            session.getLastUsedAt().isBefore(LocalDateTime.now().minusDays(7))) {
+            return true;
+        }
+
+        // Rotate on suspicious activity (IP change, etc.)
+        // This would be implemented based on security policies
+        
+        return false;
     }
 
     /**
