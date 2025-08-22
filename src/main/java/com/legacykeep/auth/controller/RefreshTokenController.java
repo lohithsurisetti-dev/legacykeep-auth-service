@@ -1,5 +1,6 @@
 package com.legacykeep.auth.controller;
 
+import com.legacykeep.auth.dto.ApiResponse;
 import com.legacykeep.auth.dto.JwtTokenDto;
 import com.legacykeep.auth.service.JwtService;
 import lombok.RequiredArgsConstructor;
@@ -47,7 +48,7 @@ public class RefreshTokenController {
             String refreshToken = extractRefreshToken(authorizationHeader);
             if (refreshToken == null) {
                 return ResponseEntity.badRequest()
-                        .body(new ErrorResponse("Invalid authorization header", "REFRESH_TOKEN_MISSING"));
+                        .body(ApiResponse.error("Invalid authorization header", "REFRESH_TOKEN_MISSING"));
             }
 
             // Get client information
@@ -60,7 +61,7 @@ public class RefreshTokenController {
             if (tokenDtoOpt.isEmpty()) {
                 log.warn("Failed to refresh token from IP: {}", ipAddress);
                 return ResponseEntity.status(401)
-                        .body(new ErrorResponse("Invalid or expired refresh token", "REFRESH_TOKEN_INVALID"));
+                        .body(ApiResponse.error("Invalid or expired refresh token", "REFRESH_TOKEN_INVALID"));
             }
 
             JwtTokenDto tokenDto = tokenDtoOpt.get();
@@ -68,12 +69,12 @@ public class RefreshTokenController {
             log.info("Successfully refreshed token for user: {} from IP: {}", 
                     tokenDto.getUserId(), ipAddress);
 
-            return ResponseEntity.ok(tokenDto);
+            return ResponseEntity.ok(ApiResponse.success(tokenDto, "Token refreshed successfully"));
 
         } catch (Exception e) {
             log.error("Error during token refresh: {}", e.getMessage(), e);
             return ResponseEntity.status(500)
-                    .body(new ErrorResponse("Internal server error during token refresh", "INTERNAL_ERROR"));
+                    .body(ApiResponse.error("Internal server error during token refresh", "INTERNAL_ERROR"));
         }
     }
 
@@ -93,7 +94,7 @@ public class RefreshTokenController {
             String refreshToken = extractRefreshToken(authorizationHeader);
             if (refreshToken == null) {
                 return ResponseEntity.badRequest()
-                        .body(new ErrorResponse("Invalid authorization header", "REFRESH_TOKEN_MISSING"));
+                        .body(ApiResponse.error("Invalid authorization header", "REFRESH_TOKEN_MISSING"));
             }
 
             // TODO: Implement token revocation logic
@@ -106,12 +107,12 @@ public class RefreshTokenController {
             log.info("Refresh token revocation requested from IP: {}", getClientIpAddress(request));
             
             return ResponseEntity.ok()
-                    .body(new SuccessResponse("Refresh token revoked successfully"));
+                    .body(ApiResponse.success("Refresh token revoked successfully"));
 
         } catch (Exception e) {
             log.error("Error during token revocation: {}", e.getMessage(), e);
             return ResponseEntity.status(500)
-                    .body(new ErrorResponse("Internal server error during token revocation", "INTERNAL_ERROR"));
+                    .body(ApiResponse.error("Internal server error during token revocation", "INTERNAL_ERROR"));
         }
     }
 
@@ -142,13 +143,6 @@ public class RefreshTokenController {
         return request.getRemoteAddr();
     }
 
-    /**
-     * Error response DTO.
-     */
-    public record ErrorResponse(String message, String code) {}
 
-    /**
-     * Success response DTO.
-     */
-    public record SuccessResponse(String message) {}
 }
+

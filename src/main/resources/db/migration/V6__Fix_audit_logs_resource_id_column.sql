@@ -32,3 +32,4 @@ ORDER BY created_at DESC;
 
 -- Add comment for documentation
 COMMENT ON COLUMN audit_logs.resource_id IS 'ID of the specific resource (VARCHAR for flexibility)';
+

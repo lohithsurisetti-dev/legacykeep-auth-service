@@ -34,3 +34,4 @@ BEGIN
     RAISE NOTICE 'Databases created: auth_db, auth_db_dev, auth_db_test';
     RAISE NOTICE 'Extensions installed: uuid-ossp, pgcrypto';
 END $$;
+

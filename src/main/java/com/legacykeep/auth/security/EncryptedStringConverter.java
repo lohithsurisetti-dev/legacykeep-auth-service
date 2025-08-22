@@ -93,3 +93,4 @@ public class EncryptedStringConverter implements AttributeConverter<String, Stri
         return new SecretKeySpec(key, ALGORITHM);
     }
 }
+

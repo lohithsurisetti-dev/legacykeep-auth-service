@@ -10,3 +10,4 @@ ALTER COLUMN ip_address TYPE VARCHAR(255);
 
 -- Add comment for documentation
 COMMENT ON COLUMN user_sessions.ip_address IS 'IP address of the session (stored as VARCHAR for flexibility)';
+

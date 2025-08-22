@@ -30,3 +30,4 @@ public class RegisterResponseDto {
     private LocalDateTime registeredAt;
     private String message;
 }
+

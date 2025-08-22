@@ -127,3 +127,4 @@ COMMENT ON COLUMN audit_logs.severity IS 'Severity level (LOW, MEDIUM, HIGH, CRI
 COMMENT ON COLUMN audit_logs.description IS 'Human-readable description of the event';
 COMMENT ON COLUMN audit_logs.is_successful IS 'Whether the operation was successful';
 COMMENT ON COLUMN audit_logs.retention_days IS 'Number of days to retain this log (null = retain indefinitely)';
+

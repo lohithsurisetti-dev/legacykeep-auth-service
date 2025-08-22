@@ -23,3 +23,4 @@ public class LoginRequestDto {
 
     private boolean rememberMe = false;
 }
+

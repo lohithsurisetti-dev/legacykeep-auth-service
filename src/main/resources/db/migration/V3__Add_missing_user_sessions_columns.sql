@@ -34,3 +34,4 @@ COMMENT ON COLUMN user_sessions.security_level IS 'Security level (LOW, MEDIUM, 
 COMMENT ON COLUMN user_sessions.two_factor_verified IS 'Whether 2FA was verified for this session';
 COMMENT ON COLUMN user_sessions.remember_me IS 'Whether this is a remember-me session';
 COMMENT ON COLUMN user_sessions.version IS 'Optimistic locking version';
+

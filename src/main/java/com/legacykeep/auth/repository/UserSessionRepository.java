@@ -234,3 +234,4 @@ public interface UserSessionRepository extends JpaRepository<UserSession, Long> 
     @Query("SELECT us FROM UserSession us WHERE us.rememberMe = true AND us.isActive = true")
     List<UserSession> findRememberMeSessions();
 }
+

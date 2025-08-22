@@ -192,3 +192,4 @@ COMMENT ON TABLE audit_logs IS 'Stores security audit trail for all authenticati
 COMMENT ON TABLE rate_limits IS 'Stores rate limiting data to prevent abuse';
 COMMENT ON TABLE password_history IS 'Stores password history to prevent reuse';
 COMMENT ON TABLE blacklisted_tokens IS 'Stores blacklisted JWT tokens for logout functionality';
+

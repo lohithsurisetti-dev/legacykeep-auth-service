@@ -314,3 +314,4 @@ public interface AuditLogRepository extends JpaRepository<AuditLog, Long> {
     @Query("SELECT al.userId, COUNT(al) as count FROM AuditLog al WHERE al.isSuccessful = false AND al.createdAt BETWEEN :startDate AND :endDate GROUP BY al.userId ORDER BY count DESC")
     List<Object[]> findUsersWithMostFailedOperations(@Param("startDate") LocalDateTime startDate, @Param("endDate") LocalDateTime endDate);
 }
+

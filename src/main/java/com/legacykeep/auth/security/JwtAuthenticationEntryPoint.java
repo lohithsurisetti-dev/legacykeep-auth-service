@@ -85,3 +85,4 @@ public class JwtAuthenticationEntryPoint implements AuthenticationEntryPoint {
         return request.getRemoteAddr();
     }
 }
+

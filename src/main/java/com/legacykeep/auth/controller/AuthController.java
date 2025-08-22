@@ -1,5 +1,6 @@
 package com.legacykeep.auth.controller;
 
+import com.legacykeep.auth.dto.ApiResponse;
 import com.legacykeep.auth.dto.JwtTokenDto;
 import com.legacykeep.auth.dto.LoginRequestDto;
 import com.legacykeep.auth.dto.RegisterRequestDto;
@@ -64,13 +65,13 @@ public class AuthController {
 
             log.info("User registered successfully: {} (ID: {})", request.getEmail(), response.getUserId());
 
-            return ResponseEntity.ok(response);
+            return ResponseEntity.ok(ApiResponse.success(response, "User registered successfully"));
 
         } catch (Exception e) {
             log.error("Registration failed for email: {} - {}", request.getEmail(), e.getMessage(), e);
             
             return ResponseEntity.badRequest()
-                    .body(new ErrorResponse("Registration failed", "REGISTRATION_ERROR", e.getMessage()));
+                    .body(ApiResponse.error("Registration failed", "REGISTRATION_ERROR", e.getMessage()));
         }
     }
 
@@ -109,13 +110,13 @@ public class AuthController {
 
             log.info("User logged in successfully: {} (ID: {})", request.getIdentifier(), tokenDto.getUserId());
 
-            return ResponseEntity.ok(tokenDto);
+            return ResponseEntity.ok(ApiResponse.success(tokenDto, "User logged in successfully"));
 
         } catch (Exception e) {
             log.error("Login failed for identifier: {} - {}", request.getIdentifier(), e.getMessage(), e);
             
             return ResponseEntity.status(401)
-                    .body(new ErrorResponse("Authentication failed", "AUTHENTICATION_ERROR", e.getMessage()));
+                    .body(ApiResponse.error("Authentication failed", "AUTHENTICATION_ERROR", e.getMessage()));
         }
     }
 
@@ -137,8 +138,8 @@ public class AuthController {
             // Extract access token
             String accessToken = extractAccessToken(authorizationHeader);
             if (accessToken == null) {
-                return ResponseEntity.badRequest()
-                        .body(new ErrorResponse("Invalid authorization header", "INVALID_TOKEN"));
+                            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error("Invalid authorization header", "INVALID_TOKEN"));
             }
 
             String ipAddress = getClientIpAddress(httpRequest);
@@ -148,13 +149,13 @@ public class AuthController {
             authService.logoutUser(accessToken, ipAddress);
 
             return ResponseEntity.ok()
-                    .body(new SuccessResponse("Logged out successfully"));
+                    .body(ApiResponse.success("Logged out successfully"));
 
         } catch (Exception e) {
             log.error("Logout failed: {}", e.getMessage(), e);
             
             return ResponseEntity.status(500)
-                    .body(new ErrorResponse("Logout failed", "LOGOUT_ERROR", e.getMessage()));
+                    .body(ApiResponse.error("Logout failed", "LOGOUT_ERROR", e.getMessage()));
         }
     }
 
@@ -179,13 +180,13 @@ public class AuthController {
             authService.verifyEmail(token, ipAddress);
 
             return ResponseEntity.ok()
-                    .body(new SuccessResponse("Email verified successfully"));
+                    .body(ApiResponse.success("Email verified successfully"));
 
         } catch (Exception e) {
             log.error("Email verification failed: {}", e.getMessage(), e);
             
             return ResponseEntity.badRequest()
-                    .body(new ErrorResponse("Email verification failed", "VERIFICATION_ERROR", e.getMessage()));
+                    .body(ApiResponse.error("Email verification failed", "VERIFICATION_ERROR", e.getMessage()));
         }
     }
 
@@ -211,13 +212,13 @@ public class AuthController {
             authService.requestPasswordReset(email, ipAddress);
 
             return ResponseEntity.ok()
-                    .body(new SuccessResponse("Password reset email sent"));
+                    .body(ApiResponse.success("Password reset email sent"));
 
         } catch (Exception e) {
             log.error("Password reset request failed for email: {} - {}", email, e.getMessage(), e);
             
             return ResponseEntity.badRequest()
-                    .body(new ErrorResponse("Password reset request failed", "RESET_ERROR", e.getMessage()));
+                    .body(ApiResponse.error("Password reset request failed", "RESET_ERROR", e.getMessage()));
         }
     }
 
@@ -244,13 +245,13 @@ public class AuthController {
             authService.resetPassword(token, newPassword, ipAddress);
 
             return ResponseEntity.ok()
-                    .body(new SuccessResponse("Password reset successfully"));
+                    .body(ApiResponse.success("Password reset successfully"));
 
         } catch (Exception e) {
             log.error("Password reset failed: {}", e.getMessage(), e);
             
             return ResponseEntity.badRequest()
-                    .body(new ErrorResponse("Password reset failed", "RESET_ERROR", e.getMessage()));
+                    .body(ApiResponse.error("Password reset failed", "RESET_ERROR", e.getMessage()));
         }
     }
 
@@ -267,26 +268,26 @@ public class AuthController {
             String role = (String) httpRequest.getAttribute("userRole");
 
             if (userId == null) {
-                return ResponseEntity.status(401)
-                        .body(new ErrorResponse("User not authenticated", "UNAUTHORIZED"));
+                            return ResponseEntity.status(401)
+                    .body(ApiResponse.error("User not authenticated", "UNAUTHORIZED"));
             }
 
             User user = authService.getUserById(userId);
             
-            return ResponseEntity.ok(new UserInfoResponse(
+            return ResponseEntity.ok(ApiResponse.success(new UserInfoResponse(
                     user.getId(),
                     user.getEmail(),
                     user.getUsername(),
                     user.getRole().name(),
                     user.getStatus().name(),
                     user.isEmailVerified()
-            ));
+            ), "User information retrieved successfully"));
 
         } catch (Exception e) {
             log.error("Failed to get current user: {}", e.getMessage(), e);
             
             return ResponseEntity.status(500)
-                    .body(new ErrorResponse("Failed to get user info", "USER_INFO_ERROR", e.getMessage()));
+                    .body(ApiResponse.error("Failed to get user info", "USER_INFO_ERROR", e.getMessage()));
         }
     }
 
@@ -320,20 +321,6 @@ public class AuthController {
     // =============================================================================
     // Response DTOs
     // =============================================================================
-
-    /**
-     * Error response DTO.
-     */
-    public record ErrorResponse(String message, String code, String details) {
-        public ErrorResponse(String message, String code) {
-            this(message, code, null);
-        }
-    }
-
-    /**
-     * Success response DTO.
-     */
-    public record SuccessResponse(String message) {}
 
     /**
      * User information response DTO.
