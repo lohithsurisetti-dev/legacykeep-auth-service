@@ -43,17 +43,22 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             @NonNull HttpServletResponse response,
             @NonNull FilterChain filterChain) throws ServletException, IOException {
 
-        try {
-            String authHeader = request.getHeader("Authorization");
-            
-            // Skip JWT processing for excluded paths
-            if (shouldSkipJwtProcessing(request, authHeader)) {
-                filterChain.doFilter(request, response);
-                return;
-            }
+        String authHeader = request.getHeader("Authorization");
+        String path = request.getRequestURI();
+        
+        log.debug("JWT Filter processing request: {} {}", request.getMethod(), path);
+        
+        // Skip JWT processing for excluded paths
+        if (shouldSkipJwtProcessing(request, authHeader)) {
+            log.debug("Skipping JWT processing for path: {}", path);
+            filterChain.doFilter(request, response);
+            return;
+        }
 
+        try {
             String jwt = extractJwtFromHeader(authHeader);
             if (jwt == null) {
+                log.debug("No JWT token found for path: {}", path);
                 filterChain.doFilter(request, response);
                 return;
             }
@@ -126,18 +131,25 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private boolean shouldSkipJwtProcessing(HttpServletRequest request, String authHeader) {
         String path = request.getRequestURI();
         
-        // Skip for public endpoints
-        if (path.startsWith("/api/v1/test/") ||
-            path.startsWith("/api/v1/auth/login") ||
-            path.startsWith("/api/v1/auth/register") ||
-            path.startsWith("/api/v1/auth/forgot-password") ||
-            path.startsWith("/api/v1/health") ||
-            path.startsWith("/api/v1/actuator/")) {
+        // Skip for public endpoints (regardless of authorization header)
+        if (path.startsWith("/test/") ||
+            path.startsWith("/auth/login") ||
+            path.startsWith("/auth/register") ||
+            path.startsWith("/auth/forgot-password") ||
+            path.startsWith("/health") ||
+            path.startsWith("/actuator/")) {
+            log.debug("Skipping JWT processing for public endpoint: {}", path);
             return true;
         }
 
-        // Skip if no authorization header
-        return authHeader == null;
+        // For protected endpoints, require authorization header
+        if (authHeader == null) {
+            log.debug("JWT processing required but no authorization header for path: {}", path);
+            return false; // Don't skip - let Spring Security handle the 401/403
+        }
+        
+        log.debug("JWT processing required for path: {}", path);
+        return false;
     }
 
     /**

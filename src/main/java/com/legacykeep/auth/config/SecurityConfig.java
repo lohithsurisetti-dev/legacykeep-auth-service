@@ -53,16 +53,16 @@ public class SecurityConfig {
             // Configure authorization
             .authorizeHttpRequests(authz -> authz
                 // Allow test endpoints for development
-                .requestMatchers("/api/v1/test/**").permitAll()
+                .requestMatchers("/test/**").permitAll()
                 
                 // Allow actuator endpoints for monitoring
-                .requestMatchers("/api/v1/actuator/**").permitAll()
+                .requestMatchers("/actuator/**").permitAll()
                 
                 // Allow health check endpoints
-                .requestMatchers("/api/v1/health", "/api/v1/health/**").permitAll()
+                .requestMatchers("/health", "/health/**").permitAll()
                 
-                // Allow authentication endpoints (will be implemented later)
-                .requestMatchers("/api/v1/auth/**").permitAll()
+                // Allow authentication endpoints
+                .requestMatchers("/auth/**").permitAll()
                 
                 // Require authentication for all other endpoints
                 .anyRequest().authenticated()

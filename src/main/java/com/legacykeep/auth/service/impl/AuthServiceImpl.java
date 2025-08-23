@@ -13,8 +13,12 @@ import com.legacykeep.auth.repository.AuditLogRepository;
 import com.legacykeep.auth.repository.UserRepository;
 import com.legacykeep.auth.repository.UserSessionRepository;
 import com.legacykeep.auth.service.AuthService;
+import com.legacykeep.auth.service.EventPublisherService;
 import com.legacykeep.auth.service.JwtService;
 import com.legacykeep.auth.service.TokenBlacklistService;
+import com.legacykeep.auth.event.dto.UserRegisteredEvent;
+import com.legacykeep.auth.event.dto.UserEmailVerifiedEvent;
+import com.legacykeep.auth.event.dto.UserPasswordResetRequestedEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -22,6 +26,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -45,6 +50,7 @@ public class AuthServiceImpl implements AuthService {
     private final JwtService jwtService;
     private final TokenBlacklistService tokenBlacklistService;
     private final PasswordEncoder passwordEncoder;
+    private final EventPublisherService eventPublisherService;
 
     // =============================================================================
     // User Registration and Authentication
@@ -100,6 +106,30 @@ public class AuthServiceImpl implements AuthService {
                 deviceInfo,
                 true
         );
+
+        // Publish user registration event
+        try {
+            var userRegisteredEvent = UserRegisteredEvent.create(
+                    savedUser.getId().toString(),
+                    savedUser.getEmail(),
+                    savedUser.getUsername(),
+                    null, // firstName - not available in current DTO
+                    null, // lastName - not available in current DTO
+                    savedUser.getEmailVerificationToken(),
+                    savedUser.getEmailVerificationExpiresAt().toInstant(ZoneOffset.UTC),
+                    "en", // Default language
+                    "UTC", // Default timezone
+                    request.isAcceptMarketing()
+            );
+            
+            eventPublisherService.publishUserEvent(userRegisteredEvent);
+            log.info("User registration event published: userId={}, eventId={}", 
+                    savedUser.getId(), userRegisteredEvent.getEventId());
+        } catch (Exception e) {
+            log.error("Failed to publish user registration event: userId={}, error={}", 
+                    savedUser.getId(), e.getMessage(), e);
+            // Don't fail the registration if event publishing fails
+        }
 
         log.info("User registered successfully: {} (ID: {})", request.getEmail(), savedUser.getId());
 
@@ -247,6 +277,25 @@ public class AuthServiceImpl implements AuthService {
                 true
         );
 
+        // Publish email verification event
+        try {
+            var emailVerifiedEvent = UserEmailVerifiedEvent.create(
+                    user.getId().toString(),
+                    user.getEmail(),
+                    LocalDateTime.now().toInstant(ZoneOffset.UTC),
+                    ipAddress,
+                    "Unknown" // deviceInfo not available in this context
+            );
+            
+            eventPublisherService.publishUserEvent(emailVerifiedEvent);
+            log.info("Email verification event published: userId={}, eventId={}", 
+                    user.getId(), emailVerifiedEvent.getEventId());
+        } catch (Exception e) {
+            log.error("Failed to publish email verification event: userId={}, error={}", 
+                    user.getId(), e.getMessage(), e);
+            // Don't fail the verification if event publishing fails
+        }
+
         log.info("Email verified successfully for user: {}", user.getId());
     }
 
@@ -283,6 +332,26 @@ public class AuthServiceImpl implements AuthService {
                 "Unknown",
                 true
         );
+
+        // Publish password reset requested event
+        try {
+            var passwordResetEvent = UserPasswordResetRequestedEvent.create(
+                    user.getId().toString(),
+                    user.getEmail(),
+                    user.getPasswordResetToken(),
+                    user.getPasswordResetExpiresAt().toInstant(ZoneOffset.UTC),
+                    ipAddress,
+                    "Unknown" // deviceInfo not available in this context
+            );
+            
+            eventPublisherService.publishUserEvent(passwordResetEvent);
+            log.info("Password reset requested event published: userId={}, eventId={}", 
+                    user.getId(), passwordResetEvent.getEventId());
+        } catch (Exception e) {
+            log.error("Failed to publish password reset requested event: userId={}, error={}", 
+                    user.getId(), e.getMessage(), e);
+            // Don't fail the password reset request if event publishing fails
+        }
 
         log.info("Password reset requested for user: {}", user.getId());
     }
