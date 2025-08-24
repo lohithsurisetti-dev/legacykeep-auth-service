@@ -10,8 +10,8 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 /**
- * Event DTO for user registration events.
- * This event is published when a new user registers in the system.
+ * Event DTO for user email verification request events.
+ * This event is published when a user needs to verify their email address.
  * 
  * @author LegacyKeep Team
  * @version 1.0.0
@@ -20,7 +20,7 @@ import java.util.UUID;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class UserRegisteredEvent {
+public class UserEmailVerificationRequestedEvent {
     
     /**
      * Unique identifier for the event
@@ -28,40 +28,51 @@ public class UserRegisteredEvent {
     private String eventId;
     
     /**
-     * User ID of the registered user
+     * User ID of the user requesting verification
      */
     private Long userId;
     
     /**
-     * Email address of the registered user
+     * Email address of the user
      */
     private String email;
     
     /**
-     * Username of the registered user
+     * Username of the user
      */
     private String username;
     
     /**
-     * First name of the registered user
+     * First name of the user
      */
     private String firstName;
     
     /**
-     * Last name of the registered user
+     * Last name of the user
      */
     private String lastName;
     
     /**
-     * Full name of the registered user
+     * Full name of the user
      */
     private String fullName;
     
     /**
-     * Timestamp when the user was registered
+     * Email verification token
+     */
+    private String verificationToken;
+    
+    /**
+     * Timestamp when the verification was requested
      */
     @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
-    private LocalDateTime registeredAt;
+    private LocalDateTime requestedAt;
+    
+    /**
+     * Timestamp when the verification token expires
+     */
+    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
+    private LocalDateTime expiresAt;
     
     /**
      * Source service that published this event
@@ -72,25 +83,28 @@ public class UserRegisteredEvent {
      * Event type identifier
      */
     @Builder.Default
-    private String eventType = "USER_REGISTERED";
+    private String eventType = "USER_EMAIL_VERIFICATION_REQUESTED";
     
     /**
-     * Create a UserRegisteredEvent with default values.
+     * Create a UserEmailVerificationRequestedEvent with default values.
      * 
      * @param userId User ID
      * @param email User email
      * @param username User username
      * @param firstName User first name
      * @param lastName User last name
-     * @return UserRegisteredEvent instance
+     * @param verificationToken Email verification token
+     * @param expiresAt Token expiration time
+     * @return UserEmailVerificationRequestedEvent instance
      */
-    public static UserRegisteredEvent create(Long userId, String email, String username, 
-                                           String firstName, String lastName) {
+    public static UserEmailVerificationRequestedEvent create(Long userId, String email, String username, 
+                                                           String firstName, String lastName, 
+                                                           String verificationToken, LocalDateTime expiresAt) {
         String fullName = (firstName != null && lastName != null) ? 
             firstName + " " + lastName : 
             (firstName != null ? firstName : (lastName != null ? lastName : username));
             
-        return UserRegisteredEvent.builder()
+        return UserEmailVerificationRequestedEvent.builder()
                 .eventId(UUID.randomUUID().toString())
                 .userId(userId)
                 .email(email)
@@ -98,9 +112,11 @@ public class UserRegisteredEvent {
                 .firstName(firstName)
                 .lastName(lastName)
                 .fullName(fullName)
-                .registeredAt(LocalDateTime.now())
+                .verificationToken(verificationToken)
+                .requestedAt(LocalDateTime.now())
+                .expiresAt(expiresAt)
                 .sourceService("auth-service")
-                .eventType("USER_REGISTERED")
+                .eventType("USER_EMAIL_VERIFICATION_REQUESTED")
                 .build();
     }
 }

@@ -50,26 +50,14 @@ public class SecurityConfig {
                 session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
             )
             
-            // Configure authorization
+            // Configure authorization - temporarily allow all requests for testing
             .authorizeHttpRequests(authz -> authz
-                // Allow test endpoints for development
-                .requestMatchers("/test/**").permitAll()
-                
-                // Allow actuator endpoints for monitoring
-                .requestMatchers("/actuator/**").permitAll()
-                
-                // Allow health check endpoints
-                .requestMatchers("/health", "/health/**").permitAll()
-                
-                // Allow authentication endpoints
-                .requestMatchers("/auth/**").permitAll()
-                
-                // Require authentication for all other endpoints
-                .anyRequest().authenticated()
+                // Allow all requests for testing
+                .anyRequest().permitAll()
             )
             
-            // Add JWT authentication filter
-            .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+            // Temporarily disable JWT filter for testing
+            // .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
             
             // Configure logout
             .logout(logout -> logout

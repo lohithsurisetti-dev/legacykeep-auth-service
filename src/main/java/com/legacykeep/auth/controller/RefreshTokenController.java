@@ -48,7 +48,7 @@ public class RefreshTokenController {
             String refreshToken = extractRefreshToken(authorizationHeader);
             if (refreshToken == null) {
                 return ResponseEntity.badRequest()
-                        .body(ApiResponse.error("Invalid authorization header", "REFRESH_TOKEN_MISSING"));
+                        .body(ApiResponse.error("Invalid authorization header", "Refresh token missing", 400));
             }
 
             // Get client information
@@ -61,7 +61,7 @@ public class RefreshTokenController {
             if (tokenDtoOpt.isEmpty()) {
                 log.warn("Failed to refresh token from IP: {}", ipAddress);
                 return ResponseEntity.status(401)
-                        .body(ApiResponse.error("Invalid or expired refresh token", "REFRESH_TOKEN_INVALID"));
+                        .body(ApiResponse.error("Invalid or expired refresh token", "Token validation failed", 401));
             }
 
             JwtTokenDto tokenDto = tokenDtoOpt.get();
@@ -74,7 +74,7 @@ public class RefreshTokenController {
         } catch (Exception e) {
             log.error("Error during token refresh: {}", e.getMessage(), e);
             return ResponseEntity.status(500)
-                    .body(ApiResponse.error("Internal server error during token refresh", "INTERNAL_ERROR"));
+                    .body(ApiResponse.error("Internal server error during token refresh", e.getMessage(), 500));
         }
     }
 
@@ -94,7 +94,7 @@ public class RefreshTokenController {
             String refreshToken = extractRefreshToken(authorizationHeader);
             if (refreshToken == null) {
                 return ResponseEntity.badRequest()
-                        .body(ApiResponse.error("Invalid authorization header", "REFRESH_TOKEN_MISSING"));
+                        .body(ApiResponse.error("Invalid authorization header", "Refresh token missing", 400));
             }
 
             // TODO: Implement token revocation logic
@@ -112,7 +112,7 @@ public class RefreshTokenController {
         } catch (Exception e) {
             log.error("Error during token revocation: {}", e.getMessage(), e);
             return ResponseEntity.status(500)
-                    .body(ApiResponse.error("Internal server error during token revocation", "INTERNAL_ERROR"));
+                    .body(ApiResponse.error("Internal server error during token revocation", e.getMessage(), 500));
         }
     }
 

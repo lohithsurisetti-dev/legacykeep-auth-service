@@ -1,71 +1,104 @@
 package com.legacykeep.auth.event.dto;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
-import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
-import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
-import lombok.experimental.SuperBuilder;
 
 import java.time.Instant;
+import java.time.LocalDateTime;
+import java.util.UUID;
 
 /**
- * Event published when a user requests a password reset.
+ * Event DTO for user password reset request events.
+ * This event is published when a user requests a password reset.
  * 
  * @author LegacyKeep Team
  * @version 1.0.0
- * @since 2025-08-23
  */
 @Data
-@SuperBuilder
+@Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@EqualsAndHashCode(callSuper = true)
-@JsonInclude(JsonInclude.Include.NON_NULL)
-public class UserPasswordResetRequestedEvent extends BaseEvent {
-
+public class UserPasswordResetRequestedEvent {
+    
     /**
-     * User's email address
+     * Unique identifier for the event
+     */
+    private String eventId;
+    
+    /**
+     * User ID of the user who requested password reset
+     */
+    private String userId;
+    
+    /**
+     * Email address for password reset
      */
     private String email;
-
+    
     /**
      * Password reset token
      */
     private String resetToken;
-
+    
     /**
-     * Password reset token expiry time
+     * Timestamp when the reset token expires
      */
-    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss'Z'", timezone = "UTC")
-    private Instant resetExpiry;
-
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'")
+    private Instant resetTokenExpiresAt;
+    
     /**
-     * IP address from where reset was requested
+     * IP address from which the reset was requested
      */
-    private String requestIpAddress;
-
+    private String ipAddress;
+    
     /**
-     * User agent from where reset was requested
+     * Device information
      */
-    private String requestUserAgent;
-
+    private String deviceInfo;
+    
     /**
-     * Create a new UserPasswordResetRequestedEvent with initialized base fields
+     * Timestamp when the event was created
+     */
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'")
+    @Builder.Default
+    private LocalDateTime eventTimestamp = LocalDateTime.now();
+    
+    /**
+     * Source service that published this event
+     */
+    @Builder.Default
+    private String sourceService = "auth-service";
+    
+    /**
+     * Event type identifier
+     */
+    @Builder.Default
+    private String eventType = "USER_PASSWORD_RESET_REQUESTED";
+    
+    /**
+     * Create a UserPasswordResetRequestedEvent.
+     * 
+     * @param userId User ID
+     * @param email Email address
+     * @param resetToken Reset token
+     * @param resetTokenExpiresAt Token expiration
+     * @param ipAddress IP address
+     * @param deviceInfo Device information
+     * @return UserPasswordResetRequestedEvent instance
      */
     public static UserPasswordResetRequestedEvent create(String userId, String email, String resetToken,
-                                                       Instant resetExpiry, String requestIpAddress, 
-                                                       String requestUserAgent) {
-        UserPasswordResetRequestedEvent event = UserPasswordResetRequestedEvent.builder()
+                                                        Instant resetTokenExpiresAt, String ipAddress, String deviceInfo) {
+        return UserPasswordResetRequestedEvent.builder()
+                .eventId(UUID.randomUUID().toString())
+                .userId(userId)
                 .email(email)
                 .resetToken(resetToken)
-                .resetExpiry(resetExpiry)
-                .requestIpAddress(requestIpAddress)
-                .requestUserAgent(requestUserAgent)
+                .resetTokenExpiresAt(resetTokenExpiresAt)
+                .ipAddress(ipAddress)
+                .deviceInfo(deviceInfo)
                 .build();
-
-        event.initializeEvent("user.password-reset-requested.v1", userId);
-        return event;
     }
 }

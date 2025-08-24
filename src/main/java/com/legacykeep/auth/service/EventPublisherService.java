@@ -1,48 +1,54 @@
 package com.legacykeep.auth.service;
 
-import com.legacykeep.auth.event.dto.BaseEvent;
+import com.legacykeep.auth.event.dto.UserEmailVerifiedEvent;
+import com.legacykeep.auth.event.dto.UserPasswordResetRequestedEvent;
+import com.legacykeep.auth.event.dto.UserRegisteredEvent;
+import com.legacykeep.auth.event.dto.UserEmailVerificationRequestedEvent;
 
 /**
- * Service interface for publishing events to Kafka topics.
+ * Service for publishing user events to messaging systems (e.g., Kafka).
+ * 
+ * Handles the publishing of various user-related events to enable
+ * event-driven architecture across microservices.
  * 
  * @author LegacyKeep Team
  * @version 1.0.0
- * @since 2025-08-23
  */
 public interface EventPublisherService {
 
     /**
-     * Publish an event to the specified Kafka topic.
+     * Publish a user registration event.
      * 
-     * @param topic The Kafka topic to publish to
-     * @param event The event to publish
-     * @param <T> The type of event extending BaseEvent
+     * @param event The user registration event to publish
      */
-    <T extends BaseEvent> void publishEvent(String topic, T event);
+    void publishUserRegisteredEvent(UserRegisteredEvent event);
 
     /**
-     * Publish an event to the default user events topic.
+     * Publish a user email verification event.
      * 
-     * @param event The event to publish
-     * @param <T> The type of event extending BaseEvent
+     * @param event The user email verification event to publish
      */
-    <T extends BaseEvent> void publishUserEvent(T event);
+    void publishUserEmailVerifiedEvent(UserEmailVerifiedEvent event);
 
     /**
-     * Publish an event to the default auth events topic.
+     * Publish a user email verification requested event.
      * 
-     * @param event The event to publish
-     * @param <T> The type of event extending BaseEvent
+     * @param event The user email verification requested event to publish
      */
-    <T extends BaseEvent> void publishAuthEvent(T event);
+    void publishUserEmailVerificationRequestedEvent(UserEmailVerificationRequestedEvent event);
 
     /**
-     * Publish an event with a specific key for partitioning.
+     * Publish a user password reset requested event.
      * 
-     * @param topic The Kafka topic to publish to
-     * @param key The key for partitioning
-     * @param event The event to publish
-     * @param <T> The type of event extending BaseEvent
+     * @param event The user password reset requested event to publish
      */
-    <T extends BaseEvent> void publishEvent(String topic, String key, T event);
+    void publishUserPasswordResetRequestedEvent(UserPasswordResetRequestedEvent event);
+
+    /**
+     * Publish a generic user event.
+     * 
+     * @param topic The topic to publish to
+     * @param event The event object to publish
+     */
+    void publishEvent(String topic, Object event);
 }

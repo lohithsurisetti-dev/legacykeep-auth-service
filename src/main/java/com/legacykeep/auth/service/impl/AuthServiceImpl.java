@@ -19,6 +19,7 @@ import com.legacykeep.auth.service.TokenBlacklistService;
 import com.legacykeep.auth.event.dto.UserRegisteredEvent;
 import com.legacykeep.auth.event.dto.UserEmailVerifiedEvent;
 import com.legacykeep.auth.event.dto.UserPasswordResetRequestedEvent;
+import com.legacykeep.auth.event.dto.UserEmailVerificationRequestedEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -109,24 +110,40 @@ public class AuthServiceImpl implements AuthService {
 
         // Publish user registration event
         try {
-            var userRegisteredEvent = UserRegisteredEvent.create(
-                    savedUser.getId().toString(),
-                    savedUser.getEmail(),
-                    savedUser.getUsername(),
-                    null, // firstName - not available in current DTO
-                    null, // lastName - not available in current DTO
-                    savedUser.getEmailVerificationToken(),
-                    savedUser.getEmailVerificationExpiresAt().toInstant(ZoneOffset.UTC),
-                    "en", // Default language
-                    "UTC", // Default timezone
-                    request.isAcceptMarketing()
-            );
+            var userRegisteredEvent = UserRegisteredEvent.builder()
+                    .userId(savedUser.getId())
+                    .email(savedUser.getEmail())
+                    .username(savedUser.getUsername())
+                    .firstName(request.getFirstName())
+                    .lastName(request.getLastName())
+                    .build();
             
-            eventPublisherService.publishUserEvent(userRegisteredEvent);
+            eventPublisherService.publishUserRegisteredEvent(userRegisteredEvent);
             log.info("User registration event published: userId={}, eventId={}", 
                     savedUser.getId(), userRegisteredEvent.getEventId());
         } catch (Exception e) {
             log.error("Failed to publish user registration event: userId={}, error={}", 
+                    savedUser.getId(), e.getMessage(), e);
+            // Don't fail the registration if event publishing fails
+        }
+
+        // Publish email verification requested event
+        try {
+            var emailVerificationEvent = UserEmailVerificationRequestedEvent.create(
+                    savedUser.getId(),
+                    savedUser.getEmail(),
+                    savedUser.getUsername(),
+                    request.getFirstName(),
+                    request.getLastName(),
+                    savedUser.getEmailVerificationToken(),
+                    savedUser.getEmailVerificationExpiresAt()
+            );
+            
+            eventPublisherService.publishUserEmailVerificationRequestedEvent(emailVerificationEvent);
+            log.info("Email verification requested event published: userId={}, eventId={}", 
+                    savedUser.getId(), emailVerificationEvent.getEventId());
+        } catch (Exception e) {
+            log.error("Failed to publish email verification requested event: userId={}, error={}", 
                     savedUser.getId(), e.getMessage(), e);
             // Don't fail the registration if event publishing fails
         }
@@ -287,7 +304,7 @@ public class AuthServiceImpl implements AuthService {
                     "Unknown" // deviceInfo not available in this context
             );
             
-            eventPublisherService.publishUserEvent(emailVerifiedEvent);
+            eventPublisherService.publishUserEmailVerifiedEvent(emailVerifiedEvent);
             log.info("Email verification event published: userId={}, eventId={}", 
                     user.getId(), emailVerifiedEvent.getEventId());
         } catch (Exception e) {
@@ -344,7 +361,7 @@ public class AuthServiceImpl implements AuthService {
                     "Unknown" // deviceInfo not available in this context
             );
             
-            eventPublisherService.publishUserEvent(passwordResetEvent);
+            eventPublisherService.publishUserPasswordResetRequestedEvent(passwordResetEvent);
             log.info("Password reset requested event published: userId={}, eventId={}", 
                     user.getId(), passwordResetEvent.getEventId());
         } catch (Exception e) {
@@ -686,3 +703,12 @@ public class AuthServiceImpl implements AuthService {
         }
     }
 }
+
+
+
+
+
+
+
+
+

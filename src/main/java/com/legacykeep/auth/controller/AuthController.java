@@ -38,7 +38,7 @@ import java.util.Optional;
  */
 @Slf4j
 @RestController
-@RequestMapping("/api/v1/auth")
+@RequestMapping("/auth")
 @RequiredArgsConstructor
 @Tag(name = "Authentication", description = "APIs for user authentication, registration, and authorization")
 public class AuthController {
@@ -90,7 +90,7 @@ public class AuthController {
             log.error("Registration failed for email: {} - {}", request.getEmail(), e.getMessage(), e);
             
             return ResponseEntity.badRequest()
-                    .body(ApiResponse.error("Registration failed", "REGISTRATION_ERROR", e.getMessage()));
+                    .body(ApiResponse.error("Registration failed", e.getMessage(), 400));
         }
     }
 
@@ -146,7 +146,7 @@ public class AuthController {
             log.error("Login failed for identifier: {} - {}", request.getIdentifier(), e.getMessage(), e);
             
             return ResponseEntity.status(401)
-                    .body(ApiResponse.error("Authentication failed", "AUTHENTICATION_ERROR", e.getMessage()));
+                    .body(ApiResponse.error("Authentication failed", e.getMessage(), 401));
         }
     }
 
@@ -169,7 +169,7 @@ public class AuthController {
             String accessToken = extractAccessToken(authorizationHeader);
             if (accessToken == null) {
                             return ResponseEntity.badRequest()
-                    .body(ApiResponse.error("Invalid authorization header", "INVALID_TOKEN"));
+                    .body(ApiResponse.error("Invalid authorization header", "Missing or invalid token", 400));
             }
 
             String ipAddress = getClientIpAddress(httpRequest);
@@ -185,7 +185,7 @@ public class AuthController {
             log.error("Logout failed: {}", e.getMessage(), e);
             
             return ResponseEntity.status(500)
-                    .body(ApiResponse.error("Logout failed", "LOGOUT_ERROR", e.getMessage()));
+                    .body(ApiResponse.error("Logout failed", e.getMessage(), 500));
         }
     }
 
@@ -216,7 +216,7 @@ public class AuthController {
             log.error("Email verification failed: {}", e.getMessage(), e);
             
             return ResponseEntity.badRequest()
-                    .body(ApiResponse.error("Email verification failed", "VERIFICATION_ERROR", e.getMessage()));
+                    .body(ApiResponse.error("Email verification failed", e.getMessage(), 400));
         }
     }
 
@@ -248,7 +248,7 @@ public class AuthController {
             log.error("Password reset request failed for email: {} - {}", email, e.getMessage(), e);
             
             return ResponseEntity.badRequest()
-                    .body(ApiResponse.error("Password reset request failed", "RESET_ERROR", e.getMessage()));
+                    .body(ApiResponse.error("Password reset request failed", e.getMessage(), 400));
         }
     }
 
@@ -281,7 +281,7 @@ public class AuthController {
             log.error("Password reset failed: {}", e.getMessage(), e);
             
             return ResponseEntity.badRequest()
-                    .body(ApiResponse.error("Password reset failed", "RESET_ERROR", e.getMessage()));
+                    .body(ApiResponse.error("Password reset failed", e.getMessage(), 400));
         }
     }
 
@@ -299,7 +299,7 @@ public class AuthController {
 
             if (userId == null) {
                             return ResponseEntity.status(401)
-                    .body(ApiResponse.error("User not authenticated", "UNAUTHORIZED"));
+                    .body(ApiResponse.error("User not authenticated", "User session expired or invalid", 401));
             }
 
             User user = authService.getUserById(userId);
@@ -317,7 +317,7 @@ public class AuthController {
             log.error("Failed to get current user: {}", e.getMessage(), e);
             
             return ResponseEntity.status(500)
-                    .body(ApiResponse.error("Failed to get user info", "USER_INFO_ERROR", e.getMessage()));
+                    .body(ApiResponse.error("Failed to get user info", e.getMessage(), 500));
         }
     }
 
