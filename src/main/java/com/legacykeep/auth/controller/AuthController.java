@@ -10,6 +10,14 @@ import com.legacykeep.auth.entity.UserRole;
 import com.legacykeep.auth.entity.UserStatus;
 import com.legacykeep.auth.service.AuthService;
 import com.legacykeep.auth.service.JwtService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.ExampleObject;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -32,6 +40,7 @@ import java.util.Optional;
 @RestController
 @RequestMapping("/api/v1/auth")
 @RequiredArgsConstructor
+@Tag(name = "Authentication", description = "APIs for user authentication, registration, and authorization")
 public class AuthController {
 
     private final AuthService authService;
@@ -47,8 +56,18 @@ public class AuthController {
      * - Account activation workflow
      * - Security audit logging
      */
+    @Operation(
+        summary = "Register New User",
+        description = "Registers a new user account with email verification and security features"
+    )
+    @ApiResponses(value = {
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "User registered successfully"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request data or registration failed"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "409", description = "User already exists")
+    })
     @PostMapping("/register")
     public ResponseEntity<?> register(
+            @Parameter(description = "User registration details", required = true)
             @Valid @RequestBody RegisterRequestDto request,
             HttpServletRequest httpRequest) {
 
@@ -86,8 +105,19 @@ public class AuthController {
      * - Session management
      * - Security audit logging
      */
+    @Operation(
+        summary = "User Login",
+        description = "Authenticates user and generates JWT access and refresh tokens"
+    )
+    @ApiResponses(value = {
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Login successful"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid credentials"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Authentication failed"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Account disabled or locked")
+    })
     @PostMapping("/login")
     public ResponseEntity<?> login(
+            @Parameter(description = "Login credentials", required = true)
             @Valid @RequestBody LoginRequestDto request,
             HttpServletRequest httpRequest) {
 
