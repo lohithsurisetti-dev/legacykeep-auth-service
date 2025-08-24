@@ -53,6 +53,7 @@ public class UserSession {
     private String deviceInfo;
 
     @Column(name = "ip_address")
+    @Convert(converter = com.legacykeep.auth.security.EncryptedStringConverter.class)
     private String ipAddress;
 
     @Column(name = "user_agent", columnDefinition = "TEXT")
@@ -84,6 +85,7 @@ public class UserSession {
     private Long revokedBy;
 
     @Column(name = "login_location", length = 255)
+    @Convert(converter = com.legacykeep.auth.security.EncryptedStringConverter.class)
     private String loginLocation;
 
     @Column(name = "login_method", length = 50)

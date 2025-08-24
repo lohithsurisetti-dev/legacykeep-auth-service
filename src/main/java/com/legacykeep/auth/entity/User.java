@@ -48,10 +48,12 @@ public class User {
     @NotBlank(message = "Email is required")
     @Email(message = "Email must be valid")
     @Column(unique = true, nullable = false, length = 255)
+    @Convert(converter = EncryptedStringConverter.class)
     private String email;
 
     @Size(min = 3, max = 50, message = "Username must be between 3 and 50 characters")
     @Column(unique = true, length = 50)
+    @Convert(converter = EncryptedStringConverter.class)
     private String username;
 
     @NotBlank(message = "Password hash is required")

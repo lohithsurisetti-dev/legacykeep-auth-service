@@ -60,6 +60,7 @@ public class AuditLog {
     private String details;
 
     @Column(name = "ip_address")
+    @Convert(converter = com.legacykeep.auth.security.EncryptedStringConverter.class)
     private String ipAddress;
 
     @Column(name = "user_agent", columnDefinition = "TEXT")
