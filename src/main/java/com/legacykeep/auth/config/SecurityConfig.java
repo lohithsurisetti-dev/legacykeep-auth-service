@@ -50,14 +50,20 @@ public class SecurityConfig {
                 session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
             )
             
-            // Configure authorization - temporarily allow all requests for testing
+            // Configure authorization
             .authorizeHttpRequests(authz -> authz
-                // Allow all requests for testing
-                .anyRequest().permitAll()
+                // Public endpoints
+                .requestMatchers("/auth/register", "/auth/login", "/auth/forgot-password", "/auth/verify-email", "/auth/reset-password").permitAll()
+                .requestMatchers("/test/**").permitAll()
+                .requestMatchers("/health/**", "/actuator/**").permitAll()
+                .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
+                // Protected endpoints - exclude test endpoints
+                .requestMatchers("/auth/me", "/auth/logout").authenticated()
+                .anyRequest().authenticated()
             )
             
-            // Temporarily disable JWT filter for testing
-            // .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+            // Enable JWT filter
+            .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
             
             // Configure logout
             .logout(logout -> logout

@@ -175,9 +175,14 @@ public class AuthServiceImpl implements AuthService {
             throw new IllegalArgumentException("Account is locked. Please try again later or reset your password.");
         }
 
-        // Check if account is active
-        if (user.getStatus() != UserStatus.ACTIVE && user.getStatus() != UserStatus.PENDING_VERIFICATION) {
+        // Check if account is active and email is verified
+        if (user.getStatus() != UserStatus.ACTIVE) {
             throw new IllegalArgumentException("Account is not active. Please verify your email or contact support.");
+        }
+        
+        // Check if email is verified
+        if (!user.isEmailVerified()) {
+            throw new IllegalArgumentException("Email not verified. Please check your email and click the verification link.");
         }
 
         // Validate password

@@ -25,6 +25,7 @@ import org.springframework.web.bind.annotation.*;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
+import java.time.LocalDateTime;
 import java.util.Optional;
 
 /**
@@ -199,7 +200,7 @@ public class AuthController {
      */
     @PostMapping("/verify-email")
     public ResponseEntity<?> verifyEmail(
-            @RequestParam String token,
+            @RequestParam("token") String token,
             HttpServletRequest httpRequest) {
 
         try {
@@ -231,7 +232,7 @@ public class AuthController {
      */
     @PostMapping("/forgot-password")
     public ResponseEntity<?> forgotPassword(
-            @RequestParam String email,
+            @RequestParam("email") String email,
             HttpServletRequest httpRequest) {
 
         try {
@@ -263,8 +264,8 @@ public class AuthController {
      */
     @PostMapping("/reset-password")
     public ResponseEntity<?> resetPassword(
-            @RequestParam String token,
-            @RequestParam String newPassword,
+            @RequestParam("token") String token,
+            @RequestParam("newPassword") String newPassword,
             HttpServletRequest httpRequest) {
 
         try {
@@ -322,6 +323,34 @@ public class AuthController {
     }
 
     /**
+     * Test endpoint to get verification token for testing purposes.
+     * This should be removed in production.
+     */
+    @GetMapping("/test/verification-token/{email}")
+    public ResponseEntity<?> getVerificationToken(@PathVariable("email") String email) {
+        try {
+            User user = authService.getUserByEmail(email);
+            
+            if (user.getEmailVerificationToken() == null) {
+                return ResponseEntity.badRequest()
+                        .body(ApiResponse.error("No verification token found", "User may already be verified", 400));
+            }
+            
+            return ResponseEntity.ok(ApiResponse.success(new VerificationTokenResponse(
+                    user.getEmail(),
+                    user.getEmailVerificationToken(),
+                    user.getEmailVerificationExpiresAt()
+            ), "Verification token retrieved successfully"));
+            
+        } catch (Exception e) {
+            log.error("Failed to get verification token for email: {} - {}", email, e.getMessage(), e);
+            
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error("Failed to get verification token", e.getMessage(), 400));
+        }
+    }
+
+    /**
      * Extract access token from Authorization header.
      */
     private String extractAccessToken(String authorizationHeader) {
@@ -362,5 +391,14 @@ public class AuthController {
             String role,
             String status,
             boolean emailVerified
+    ) {}
+
+    /**
+     * Verification token response DTO for testing.
+     */
+    public record VerificationTokenResponse(
+            String email,
+            String token,
+            LocalDateTime expiresAt
     ) {}
 }

@@ -133,9 +133,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         
         // Skip for public endpoints (regardless of authorization header)
         if (path.startsWith("/test/") ||
+            path.startsWith("/api/v1/auth/test/") ||
             path.startsWith("/api/v1/auth/login") ||
             path.startsWith("/api/v1/auth/register") ||
             path.startsWith("/api/v1/auth/forgot-password") ||
+            path.startsWith("/api/v1/auth/verify-email") ||
+            path.startsWith("/api/v1/auth/reset-password") ||
             path.startsWith("/health") ||
             path.startsWith("/actuator/")) {
             log.debug("Skipping JWT processing for public endpoint: {}", path);
