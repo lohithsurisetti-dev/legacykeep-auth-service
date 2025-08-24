@@ -16,6 +16,7 @@ import com.legacykeep.auth.service.AuthService;
 import com.legacykeep.auth.service.EventPublisherService;
 import com.legacykeep.auth.service.JwtService;
 import com.legacykeep.auth.service.TokenBlacklistService;
+import com.legacykeep.auth.service.HashService;
 import com.legacykeep.auth.event.dto.UserRegisteredEvent;
 import com.legacykeep.auth.event.dto.UserEmailVerifiedEvent;
 import com.legacykeep.auth.event.dto.UserPasswordResetRequestedEvent;
@@ -52,6 +53,7 @@ public class AuthServiceImpl implements AuthService {
     private final TokenBlacklistService tokenBlacklistService;
     private final PasswordEncoder passwordEncoder;
     private final EventPublisherService eventPublisherService;
+    private final HashService hashService;
 
     // =============================================================================
     // User Registration and Authentication
@@ -72,19 +74,23 @@ public class AuthServiceImpl implements AuthService {
             throw new IllegalArgumentException("Terms and conditions must be accepted");
         }
 
-        // Check if user already exists
-        if (userRepository.existsByEmailIgnoreCase(request.getEmail())) {
+        // Check if user already exists (handle encrypted fields)
+        String emailHash = hashService.generateEmailHash(request.getEmail());
+        if (userRepository.existsByEmailHash(emailHash)) {
             throw new IllegalArgumentException("User with this email already exists");
         }
 
-        if (userRepository.existsByUsernameIgnoreCase(request.getUsername())) {
+        String usernameHash = hashService.generateUsernameHash(request.getUsername());
+        if (userRepository.existsByUsernameHash(usernameHash)) {
             throw new IllegalArgumentException("Username is already taken");
         }
 
         // Create user entity
         User user = new User();
         user.setEmail(request.getEmail().toLowerCase());
+        user.setEmailHash(hashService.generateEmailHash(request.getEmail()));
         user.setUsername(request.getUsername());
+        user.setUsernameHash(hashService.generateUsernameHash(request.getUsername()));
         user.setPasswordHash(passwordEncoder.encode(request.getPassword()));
         user.setRole(UserRole.USER);
         user.setStatus(UserStatus.PENDING_VERIFICATION);
@@ -330,9 +336,8 @@ public class AuthServiceImpl implements AuthService {
     public void requestPasswordReset(String email, String ipAddress) {
         log.info("Processing password reset request for email: {}", email);
 
-        // Find user by email
-        User user = userRepository.findByEmailIgnoreCase(email)
-                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+        // Find user by email using hash-based search
+        User user = getUserByEmail(email);
 
         // Generate reset token
         user.setPasswordResetToken(generateResetToken());
@@ -430,14 +435,16 @@ public class AuthServiceImpl implements AuthService {
     @Override
     @Transactional(readOnly = true)
     public User getUserByEmail(String email) {
-        return userRepository.findByEmailIgnoreCase(email)
+        String emailHash = hashService.generateEmailHash(email);
+        return userRepository.findByEmailHash(emailHash)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
     }
 
     @Override
     @Transactional(readOnly = true)
     public User getUserByUsername(String username) {
-        return userRepository.findByUsernameIgnoreCase(username)
+        String usernameHash = hashService.generateUsernameHash(username);
+        return userRepository.findByUsernameHash(usernameHash)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
     }
 
@@ -630,14 +637,16 @@ public class AuthServiceImpl implements AuthService {
      * Find user by email or username.
      */
     private Optional<User> findUserByIdentifier(String identifier) {
-        // Try email first
-        Optional<User> userByEmail = userRepository.findByEmailIgnoreCase(identifier);
+        // Try email first using hash-based search
+        String emailHash = hashService.generateEmailHash(identifier);
+        Optional<User> userByEmail = userRepository.findByEmailHash(emailHash);
         if (userByEmail.isPresent()) {
             return userByEmail;
         }
 
-        // Try username
-        return userRepository.findByUsernameIgnoreCase(identifier);
+        // Try username using hash-based search
+        String usernameHash = hashService.generateUsernameHash(identifier);
+        return userRepository.findByUsernameHash(usernameHash);
     }
 
     /**

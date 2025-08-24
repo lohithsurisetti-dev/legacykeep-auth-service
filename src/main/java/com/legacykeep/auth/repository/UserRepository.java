@@ -52,6 +52,16 @@ public interface UserRepository extends JpaRepository<User, Long> {
     Optional<User> findByAppleId(String appleId);
     Optional<User> findByFacebookId(String facebookId);
 
+    /**
+     * Find user by email hash (for efficient encrypted field searches).
+     */
+    Optional<User> findByEmailHash(String emailHash);
+
+    /**
+     * Find user by username hash (for efficient encrypted field searches).
+     */
+    Optional<User> findByUsernameHash(String usernameHash);
+
     // =============================================================================
     // Status-based Queries
     // =============================================================================
@@ -131,6 +141,16 @@ public interface UserRepository extends JpaRepository<User, Long> {
      */
     boolean existsByUsernameIgnoreCase(String username);
 
+    /**
+     * Check if email hash exists.
+     */
+    boolean existsByEmailHash(String emailHash);
+
+    /**
+     * Check if username hash exists.
+     */
+    boolean existsByUsernameHash(String usernameHash);
+
     // =============================================================================
     // Count Queries
     // =============================================================================
@@ -151,4 +171,12 @@ public interface UserRepository extends JpaRepository<User, Long> {
      */
     @Query("SELECT COUNT(u) FROM User u WHERE u.createdAt BETWEEN :startDate AND :endDate")
     long countUsersCreatedBetween(@Param("startDate") LocalDateTime startDate, @Param("endDate") LocalDateTime endDate);
+
+    /**
+     * Find all users (for encrypted field searches).
+     * This method is used when we need to search by encrypted fields.
+     * The filtering should be done in the service layer.
+     */
+    @Query("SELECT u FROM User u WHERE u.deletedAt IS NULL")
+    List<User> findAllActiveUsersForSearch();
 }

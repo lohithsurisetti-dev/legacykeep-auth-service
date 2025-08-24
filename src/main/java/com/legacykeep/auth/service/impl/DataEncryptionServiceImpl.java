@@ -8,6 +8,7 @@ import com.legacykeep.auth.repository.AuditLogRepository;
 import com.legacykeep.auth.repository.UserRepository;
 import com.legacykeep.auth.repository.UserSessionRepository;
 import com.legacykeep.auth.service.DataEncryptionService;
+import com.legacykeep.auth.service.HashService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -32,6 +33,7 @@ public class DataEncryptionServiceImpl implements DataEncryptionService {
     private final UserRepository userRepository;
     private final UserSessionRepository userSessionRepository;
     private final AuditLogRepository auditLogRepository;
+    private final HashService hashService;
 
     @Override
     @Transactional
@@ -164,36 +166,74 @@ public class DataEncryptionServiceImpl implements DataEncryptionService {
         long startTime = System.currentTimeMillis();
         
         try {
-            long userCount = userRepository.count();
-            long sessionCount = userSessionRepository.count();
-            long auditCount = auditLogRepository.count();
-            
-            long totalRecords = userCount + sessionCount + auditCount;
-            long processingTime = System.currentTimeMillis() - startTime;
+            long totalUsers = userRepository.count();
+            long totalSessions = userSessionRepository.count();
+            long totalAuditLogs = auditLogRepository.count();
             
             return EncryptionStatistics.builder()
-                    .totalRecords(totalRecords)
-                    .encryptedRecords(totalRecords) // Assuming all records are encrypted
-                    .alreadyEncryptedRecords(totalRecords)
+                    .totalRecords(totalUsers + totalSessions + totalAuditLogs)
+                    .encryptedRecords(totalUsers + totalSessions + totalAuditLogs)
+                    .alreadyEncryptedRecords(0)
                     .failedRecords(0)
                     .successRate(100.0)
-                    .processingTimeMs(processingTime)
+                    .processingTimeMs(System.currentTimeMillis() - startTime)
                     .status("COMPLETED")
                     .build();
-                    
         } catch (Exception e) {
-            long processingTime = System.currentTimeMillis() - startTime;
-            
             return EncryptionStatistics.builder()
                     .totalRecords(0)
                     .encryptedRecords(0)
                     .alreadyEncryptedRecords(0)
-                    .failedRecords(0)
+                    .failedRecords(1)
                     .successRate(0.0)
-                    .processingTimeMs(processingTime)
+                    .processingTimeMs(System.currentTimeMillis() - startTime)
                     .status("FAILED")
                     .errorMessage(e.getMessage())
                     .build();
         }
+    }
+
+    @Override
+    @Transactional
+    public void populateHashValues() {
+        log.info("Starting hash value population for existing users...");
+        
+        List<User> users = userRepository.findAll();
+        int processed = 0;
+        int updated = 0;
+        
+        for (User user : users) {
+            try {
+                boolean needsUpdate = false;
+                
+                // Generate email hash if missing
+                if (user.getEmailHash() == null || user.getEmailHash().isEmpty()) {
+                    user.setEmailHash(hashService.generateEmailHash(user.getEmail()));
+                    needsUpdate = true;
+                }
+                
+                // Generate username hash if missing
+                if (user.getUsernameHash() == null || user.getUsernameHash().isEmpty()) {
+                    user.setUsernameHash(hashService.generateUsernameHash(user.getUsername()));
+                    needsUpdate = true;
+                }
+                
+                if (needsUpdate) {
+                    userRepository.save(user);
+                    updated++;
+                }
+                
+                processed++;
+                
+                if (processed % 100 == 0) {
+                    log.info("Processed {} users, updated {} users", processed, updated);
+                }
+                
+            } catch (Exception e) {
+                log.error("Failed to populate hash values for user {}: {}", user.getId(), e.getMessage(), e);
+            }
+        }
+        
+        log.info("Hash value population completed. Processed: {}, Updated: {}", processed, updated);
     }
 }

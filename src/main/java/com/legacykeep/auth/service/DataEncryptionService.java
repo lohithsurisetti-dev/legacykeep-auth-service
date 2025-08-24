@@ -48,4 +48,11 @@ public interface DataEncryptionService {
      * @return encryption statistics information
      */
     EncryptionStatistics getEncryptionStatistics();
+
+    /**
+     * Populate hash values for encryption.
+     * This method should be called to initialize hash values
+     * that are used for encryption and decryption.
+     */
+    void populateHashValues();
 }

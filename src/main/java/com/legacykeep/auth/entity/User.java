@@ -51,10 +51,16 @@ public class User {
     @Convert(converter = EncryptedStringConverter.class)
     private String email;
 
+    @Column(name = "email_hash", unique = true, nullable = false, length = 64)
+    private String emailHash;
+
     @Size(min = 3, max = 50, message = "Username must be between 3 and 50 characters")
     @Column(unique = true, length = 50)
     @Convert(converter = EncryptedStringConverter.class)
     private String username;
+
+    @Column(name = "username_hash", unique = true, nullable = false, length = 64)
+    private String usernameHash;
 
     @NotBlank(message = "Password hash is required")
     @Column(name = "password_hash", nullable = false, length = 255)
@@ -75,14 +81,12 @@ public class User {
     private boolean emailVerified = false;
 
     @Column(name = "email_verification_token", length = 255)
-    @Convert(converter = EncryptedStringConverter.class)
     private String emailVerificationToken;
 
     @Column(name = "email_verification_expires_at")
     private LocalDateTime emailVerificationExpiresAt;
 
     @Column(name = "password_reset_token", length = 255)
-    @Convert(converter = EncryptedStringConverter.class)
     private String passwordResetToken;
 
     @Column(name = "password_reset_expires_at")
@@ -304,12 +308,28 @@ public class User {
         this.email = email;
     }
 
+    public String getEmailHash() {
+        return emailHash;
+    }
+
+    public void setEmailHash(String emailHash) {
+        this.emailHash = emailHash;
+    }
+
     public String getUsername() {
         return username;
     }
 
     public void setUsername(String username) {
         this.username = username;
+    }
+
+    public String getUsernameHash() {
+        return usernameHash;
+    }
+
+    public void setUsernameHash(String usernameHash) {
+        this.usernameHash = usernameHash;
     }
 
     public String getPasswordHash() {

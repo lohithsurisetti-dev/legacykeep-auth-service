@@ -54,6 +54,7 @@ public class SecurityConfig {
             .authorizeHttpRequests(authz -> authz
                 // Public endpoints
                 .requestMatchers("/auth/register", "/auth/login", "/auth/forgot-password", "/auth/verify-email", "/auth/reset-password").permitAll()
+                .requestMatchers("/auth/health").permitAll()
                 .requestMatchers("/test/**").permitAll()
                 .requestMatchers("/health/**", "/actuator/**").permitAll()
                 .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()

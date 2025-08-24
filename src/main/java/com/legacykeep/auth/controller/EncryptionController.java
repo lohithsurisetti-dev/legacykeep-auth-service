@@ -149,19 +149,24 @@ public class EncryptionController {
     @PostMapping("/encrypt-sessions")
     public ResponseEntity<?> encryptSessionData() {
         try {
-            log.info("Admin requested encryption of session data");
-            
             dataEncryptionService.encryptExistingSessionData();
-            
-            return ResponseEntity.ok(ApiResponse.success(
-                "Session data encrypted successfully"
-            ));
-            
+            return ResponseEntity.ok(ApiResponse.success(null, "Session data encryption completed successfully"));
         } catch (Exception e) {
             log.error("Failed to encrypt session data: {}", e.getMessage(), e);
-            
-            return ResponseEntity.status(500)
-                    .body(ApiResponse.error("Session data encryption failed", e.getMessage(), 500));
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error("Encryption failed", e.getMessage(), 400));
+        }
+    }
+
+    @PostMapping("/populate-hashes")
+    public ResponseEntity<?> populateHashValues() {
+        try {
+            dataEncryptionService.populateHashValues();
+            return ResponseEntity.ok(ApiResponse.success(null, "Hash values populated successfully"));
+        } catch (Exception e) {
+            log.error("Failed to populate hash values: {}", e.getMessage(), e);
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error("Hash population failed", e.getMessage(), 400));
         }
     }
 }
