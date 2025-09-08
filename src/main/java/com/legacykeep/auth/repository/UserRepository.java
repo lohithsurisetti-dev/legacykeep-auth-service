@@ -62,6 +62,16 @@ public interface UserRepository extends JpaRepository<User, Long> {
      */
     Optional<User> findByUsernameHash(String usernameHash);
 
+    /**
+     * Find user by phone number hash (for efficient encrypted field searches).
+     */
+    Optional<User> findByPhoneNumberHash(String phoneNumberHash);
+
+    /**
+     * Find user by phone verification token.
+     */
+    Optional<User> findByPhoneVerificationToken(String token);
+
     // =============================================================================
     // Status-based Queries
     // =============================================================================
@@ -150,6 +160,11 @@ public interface UserRepository extends JpaRepository<User, Long> {
      * Check if username hash exists.
      */
     boolean existsByUsernameHash(String usernameHash);
+
+    /**
+     * Check if phone number hash exists.
+     */
+    boolean existsByPhoneNumberHash(String phoneNumberHash);
 
     // =============================================================================
     // Count Queries

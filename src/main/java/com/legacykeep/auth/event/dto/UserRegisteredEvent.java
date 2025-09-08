@@ -104,3 +104,4 @@ public class UserRegisteredEvent {
                 .build();
     }
 }
+

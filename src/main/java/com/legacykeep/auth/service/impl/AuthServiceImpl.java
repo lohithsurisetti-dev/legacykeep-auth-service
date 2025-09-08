@@ -62,7 +62,7 @@ public class AuthServiceImpl implements AuthService {
     @Override
     @Transactional
     public RegisterResponseDto registerUser(RegisterRequestDto request, String deviceInfo, String ipAddress, String location) {
-        log.info("Processing registration for email: {}", request.getEmail());
+        log.info("Processing registration for email: {}, phone: {}", request.getEmail(), request.getPhoneNumber());
 
         // Validate password confirmation
         if (!request.getPassword().equals(request.getConfirmPassword())) {
@@ -75,9 +75,18 @@ public class AuthServiceImpl implements AuthService {
         }
 
         // Check if user already exists (handle encrypted fields)
-        String emailHash = hashService.generateEmailHash(request.getEmail());
-        if (userRepository.existsByEmailHash(emailHash)) {
-            throw new IllegalArgumentException("User with this email already exists");
+        if (request.getEmail() != null && !request.getEmail().trim().isEmpty()) {
+            String emailHash = hashService.generateEmailHash(request.getEmail());
+            if (userRepository.existsByEmailHash(emailHash)) {
+                throw new IllegalArgumentException("User with this email already exists");
+            }
+        }
+
+        if (request.getPhoneNumber() != null && !request.getPhoneNumber().trim().isEmpty()) {
+            String phoneHash = hashService.generatePhoneHash(request.getPhoneNumber());
+            if (userRepository.existsByPhoneNumberHash(phoneHash)) {
+                throw new IllegalArgumentException("User with this phone number already exists");
+            }
         }
 
         String usernameHash = hashService.generateUsernameHash(request.getUsername());
@@ -87,16 +96,30 @@ public class AuthServiceImpl implements AuthService {
 
         // Create user entity
         User user = new User();
-        user.setEmail(request.getEmail().toLowerCase());
-        user.setEmailHash(hashService.generateEmailHash(request.getEmail()));
+        
+        // Set email fields if provided
+        if (request.getEmail() != null && !request.getEmail().trim().isEmpty()) {
+            user.setEmail(request.getEmail().toLowerCase());
+            user.setEmailHash(hashService.generateEmailHash(request.getEmail()));
+            user.setEmailVerified(false);
+            user.setEmailVerificationToken(generateVerificationToken());
+            user.setEmailVerificationExpiresAt(LocalDateTime.now().plusHours(24));
+        }
+        
+        // Set phone fields if provided
+        if (request.getPhoneNumber() != null && !request.getPhoneNumber().trim().isEmpty()) {
+            user.setPhoneNumber(request.getPhoneNumber());
+            user.setPhoneNumberHash(hashService.generatePhoneHash(request.getPhoneNumber()));
+            user.setPhoneVerified(false);
+            user.setPhoneVerificationToken(generateVerificationToken());
+            user.setPhoneVerificationExpiresAt(LocalDateTime.now().plusHours(24));
+        }
+        
         user.setUsername(request.getUsername());
         user.setUsernameHash(hashService.generateUsernameHash(request.getUsername()));
         user.setPasswordHash(passwordEncoder.encode(request.getPassword()));
         user.setRole(UserRole.USER);
         user.setStatus(UserStatus.PENDING_VERIFICATION);
-        user.setEmailVerified(false);
-        user.setEmailVerificationToken(generateVerificationToken());
-        user.setEmailVerificationExpiresAt(LocalDateTime.now().plusHours(24));
 
         // Save user
         User savedUser = userRepository.save(user);
@@ -181,14 +204,17 @@ public class AuthServiceImpl implements AuthService {
             throw new IllegalArgumentException("Account is locked. Please try again later or reset your password.");
         }
 
-        // Check if account is active and email is verified
+        // Check if account is active
         if (user.getStatus() != UserStatus.ACTIVE) {
-            throw new IllegalArgumentException("Account is not active. Please verify your email or contact support.");
+            throw new IllegalArgumentException("Account is not active. Please verify your email/phone or contact support.");
         }
         
-        // Check if email is verified
-        if (!user.isEmailVerified()) {
-            throw new IllegalArgumentException("Email not verified. Please check your email and click the verification link.");
+        // Check if at least one verification method is completed
+        boolean hasEmailVerification = user.getEmail() != null && user.isEmailVerified();
+        boolean hasPhoneVerification = user.getPhoneNumber() != null && user.isPhoneVerified();
+        
+        if (!hasEmailVerification && !hasPhoneVerification) {
+            throw new IllegalArgumentException("Please verify your email or phone number before logging in.");
         }
 
         // Validate password
@@ -638,10 +664,25 @@ public class AuthServiceImpl implements AuthService {
      */
     private Optional<User> findUserByIdentifier(String identifier) {
         // Try email first using hash-based search
-        String emailHash = hashService.generateEmailHash(identifier);
-        Optional<User> userByEmail = userRepository.findByEmailHash(emailHash);
-        if (userByEmail.isPresent()) {
-            return userByEmail;
+        try {
+            String emailHash = hashService.generateEmailHash(identifier);
+            Optional<User> userByEmail = userRepository.findByEmailHash(emailHash);
+            if (userByEmail.isPresent()) {
+                return userByEmail;
+            }
+        } catch (IllegalArgumentException e) {
+            // Not a valid email format, continue to other methods
+        }
+
+        // Try phone number using hash-based search
+        try {
+            String phoneHash = hashService.generatePhoneHash(identifier);
+            Optional<User> userByPhone = userRepository.findByPhoneNumberHash(phoneHash);
+            if (userByPhone.isPresent()) {
+                return userByPhone;
+            }
+        } catch (IllegalArgumentException e) {
+            // Not a valid phone format, continue to username
         }
 
         // Try username using hash-based search

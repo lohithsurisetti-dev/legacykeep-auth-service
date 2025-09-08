@@ -48,6 +48,17 @@ public class HashServiceImpl implements HashService {
     }
 
     @Override
+    public String generatePhoneHash(String phoneNumber) {
+        if (phoneNumber == null || phoneNumber.trim().isEmpty()) {
+            throw new IllegalArgumentException("Phone number cannot be null or empty");
+        }
+        
+        // Normalize phone number by removing spaces and special characters for consistent hashing
+        String normalizedPhone = phoneNumber.replaceAll("[\\s\\-\\(\\)]", "").trim();
+        return generateHash(normalizedPhone + "|phone|" + secretKey);
+    }
+
+    @Override
     public boolean verifyHash(String value, String hash) {
         if (value == null || hash == null) {
             return false;

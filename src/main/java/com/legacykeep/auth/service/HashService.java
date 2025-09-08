@@ -28,6 +28,14 @@ public interface HashService {
     String generateUsernameHash(String username);
     
     /**
+     * Generate a hash for phone number.
+     * 
+     * @param phoneNumber The phone number to hash
+     * @return The hash value
+     */
+    String generatePhoneHash(String phoneNumber);
+    
+    /**
      * Verify if a hash matches the given value.
      * 
      * @param value The original value

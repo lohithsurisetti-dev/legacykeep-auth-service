@@ -29,6 +29,7 @@ import java.util.Objects;
 @Table(name = "users", indexes = {
     @Index(name = "idx_users_email", columnList = "email"),
     @Index(name = "idx_users_username", columnList = "username"),
+    @Index(name = "idx_users_phone_number", columnList = "phone_number"),
     @Index(name = "idx_users_status", columnList = "status"),
     @Index(name = "idx_users_created_at", columnList = "created_at"),
     @Index(name = "idx_users_deleted_at", columnList = "deleted_at"),
@@ -36,6 +37,7 @@ import java.util.Objects;
     @Index(name = "idx_users_apple_id", columnList = "apple_id"),
     @Index(name = "idx_users_facebook_id", columnList = "facebook_id"),
     @Index(name = "idx_users_email_verification_token", columnList = "email_verification_token"),
+    @Index(name = "idx_users_phone_verification_token", columnList = "phone_verification_token"),
     @Index(name = "idx_users_password_reset_token", columnList = "password_reset_token")
 })
 @EntityListeners(AuditingEntityListener.class)
@@ -45,13 +47,12 @@ public class User {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @NotBlank(message = "Email is required")
     @Email(message = "Email must be valid")
-    @Column(unique = true, nullable = false, length = 255)
+    @Column(unique = true, nullable = true, length = 255)
     @Convert(converter = EncryptedStringConverter.class)
     private String email;
 
-    @Column(name = "email_hash", unique = true, nullable = false, length = 64)
+    @Column(name = "email_hash", unique = true, nullable = true, length = 64)
     private String emailHash;
 
     @Size(min = 3, max = 50, message = "Username must be between 3 and 50 characters")
@@ -69,12 +70,12 @@ public class User {
 
     @NotNull(message = "User status is required")
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 20)
+    @Column(nullable = false, length = 30)
     private UserStatus status = UserStatus.PENDING_VERIFICATION;
 
     @NotNull(message = "User role is required")
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 20)
+    @Column(nullable = false, length = 30)
     private UserRole role = UserRole.USER;
 
     @Column(name = "email_verified", nullable = false)
@@ -85,6 +86,22 @@ public class User {
 
     @Column(name = "email_verification_expires_at")
     private LocalDateTime emailVerificationExpiresAt;
+
+    @Column(length = 30)
+    @Convert(converter = EncryptedStringConverter.class)
+    private String phoneNumber;
+
+    @Column(name = "phone_number_hash", unique = true, length = 64)
+    private String phoneNumberHash;
+
+    @Column(name = "phone_verified", nullable = false)
+    private boolean phoneVerified = false;
+
+    @Column(name = "phone_verification_token", length = 255)
+    private String phoneVerificationToken;
+
+    @Column(name = "phone_verification_expires_at")
+    private LocalDateTime phoneVerificationExpiresAt;
 
     @Column(name = "password_reset_token", length = 255)
     private String passwordResetToken;
@@ -378,6 +395,46 @@ public class User {
 
     public void setEmailVerificationExpiresAt(LocalDateTime emailVerificationExpiresAt) {
         this.emailVerificationExpiresAt = emailVerificationExpiresAt;
+    }
+
+    public String getPhoneNumber() {
+        return phoneNumber;
+    }
+
+    public void setPhoneNumber(String phoneNumber) {
+        this.phoneNumber = phoneNumber;
+    }
+
+    public String getPhoneNumberHash() {
+        return phoneNumberHash;
+    }
+
+    public void setPhoneNumberHash(String phoneNumberHash) {
+        this.phoneNumberHash = phoneNumberHash;
+    }
+
+    public boolean isPhoneVerified() {
+        return phoneVerified;
+    }
+
+    public void setPhoneVerified(boolean phoneVerified) {
+        this.phoneVerified = phoneVerified;
+    }
+
+    public String getPhoneVerificationToken() {
+        return phoneVerificationToken;
+    }
+
+    public void setPhoneVerificationToken(String phoneVerificationToken) {
+        this.phoneVerificationToken = phoneVerificationToken;
+    }
+
+    public LocalDateTime getPhoneVerificationExpiresAt() {
+        return phoneVerificationExpiresAt;
+    }
+
+    public void setPhoneVerificationExpiresAt(LocalDateTime phoneVerificationExpiresAt) {
+        this.phoneVerificationExpiresAt = phoneVerificationExpiresAt;
     }
 
     public String getPasswordResetToken() {
