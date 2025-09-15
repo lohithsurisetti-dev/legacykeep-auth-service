@@ -50,6 +50,16 @@ public interface AuthService {
      */
     void logoutUser(String accessToken, String ipAddress);
 
+    /**
+     * Refresh access token using refresh token.
+     * 
+     * @param refreshToken User's refresh token
+     * @param deviceInfo Client device information
+     * @param ipAddress Client IP address
+     * @return New JWT token response
+     */
+    com.legacykeep.auth.dto.JwtTokenDto refreshAccessToken(String refreshToken, String deviceInfo, String ipAddress);
+
     // =============================================================================
     // Email Verification
     // =============================================================================

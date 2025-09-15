@@ -3,6 +3,7 @@ package com.legacykeep.auth.controller;
 import com.legacykeep.auth.dto.ApiResponse;
 import com.legacykeep.auth.dto.JwtTokenDto;
 import com.legacykeep.auth.dto.LoginRequestDto;
+import com.legacykeep.auth.dto.RefreshTokenRequestDto;
 import com.legacykeep.auth.dto.RegisterRequestDto;
 import com.legacykeep.auth.dto.RegisterResponseDto;
 import com.legacykeep.auth.entity.User;
@@ -191,6 +192,56 @@ public class AuthController {
     }
 
     /**
+     * Refresh access token using refresh token.
+     * 
+     * This endpoint handles token refresh with:
+     * - Refresh token validation
+     * - New access token generation
+     * - Optional refresh token rotation
+     * - Security audit logging
+     */
+    @Operation(
+        summary = "Refresh Access Token",
+        description = "Refresh access token using a valid refresh token"
+    )
+    @ApiResponses(value = {
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Token refreshed successfully"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid refresh token"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Refresh token expired or invalid")
+    })
+    @PostMapping("/refresh")
+    public ResponseEntity<?> refreshToken(
+            @Parameter(description = "Refresh token request", required = true)
+            @Valid @RequestBody RefreshTokenRequestDto request,
+            HttpServletRequest httpRequest) {
+
+        try {
+            // Get client information for security tracking
+            String deviceInfo = httpRequest.getHeader("User-Agent");
+            String ipAddress = getClientIpAddress(httpRequest);
+
+            log.info("Token refresh request from IP: {}", ipAddress);
+
+            // Refresh access token
+            JwtTokenDto tokenDto = authService.refreshAccessToken(
+                    request.getRefreshToken(),
+                    deviceInfo,
+                    ipAddress
+            );
+
+            log.info("Token refreshed successfully for user: {}", tokenDto.getUserId());
+
+            return ResponseEntity.ok(ApiResponse.success(tokenDto, "Token refreshed successfully"));
+
+        } catch (Exception e) {
+            log.error("Token refresh failed: {}", e.getMessage(), e);
+            
+            return ResponseEntity.status(401)
+                    .body(ApiResponse.error("Token refresh failed", e.getMessage(), 401));
+        }
+    }
+
+    /**
      * Verify email address with verification token.
      * 
      * This endpoint handles email verification with:
@@ -319,6 +370,136 @@ public class AuthController {
             
             return ResponseEntity.status(500)
                     .body(ApiResponse.error("Failed to get user info", e.getMessage(), 500));
+        }
+    }
+
+    /**
+     * Deactivate user account.
+     * 
+     * This endpoint handles account deactivation with:
+     * - User authentication validation
+     * - Account status update
+     * - Security audit logging
+     */
+    @Operation(
+        summary = "Deactivate Account",
+        description = "Deactivate the current user's account"
+    )
+    @ApiResponses(value = {
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Account deactivated successfully"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "User not authenticated"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "500", description = "Internal server error")
+    })
+    @PostMapping("/deactivate")
+    public ResponseEntity<?> deactivateAccount(HttpServletRequest httpRequest) {
+        try {
+            Long userId = (Long) httpRequest.getAttribute("userId");
+            String ipAddress = getClientIpAddress(httpRequest);
+
+            if (userId == null) {
+                return ResponseEntity.status(401)
+                        .body(ApiResponse.error("User not authenticated", "User session expired or invalid", 401));
+            }
+
+            log.info("Account deactivation request from user: {} IP: {}", userId, ipAddress);
+
+            // Deactivate account
+            authService.deactivateAccount(userId, ipAddress);
+
+            return ResponseEntity.ok(ApiResponse.success(null, "Account deactivated successfully"));
+
+        } catch (Exception e) {
+            log.error("Account deactivation failed: {}", e.getMessage(), e);
+            
+            return ResponseEntity.status(500)
+                    .body(ApiResponse.error("Account deactivation failed", e.getMessage(), 500));
+        }
+    }
+
+    /**
+     * Activate user account.
+     * 
+     * This endpoint handles account activation with:
+     * - User authentication validation
+     * - Account status update
+     * - Security audit logging
+     */
+    @Operation(
+        summary = "Activate Account",
+        description = "Activate the current user's account"
+    )
+    @ApiResponses(value = {
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Account activated successfully"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "User not authenticated"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "500", description = "Internal server error")
+    })
+    @PostMapping("/activate")
+    public ResponseEntity<?> activateAccount(HttpServletRequest httpRequest) {
+        try {
+            Long userId = (Long) httpRequest.getAttribute("userId");
+            String ipAddress = getClientIpAddress(httpRequest);
+
+            if (userId == null) {
+                return ResponseEntity.status(401)
+                        .body(ApiResponse.error("User not authenticated", "User session expired or invalid", 401));
+            }
+
+            log.info("Account activation request from user: {} IP: {}", userId, ipAddress);
+
+            // Activate account
+            authService.activateAccount(userId, ipAddress);
+
+            return ResponseEntity.ok(ApiResponse.success(null, "Account activated successfully"));
+
+        } catch (Exception e) {
+            log.error("Account activation failed: {}", e.getMessage(), e);
+            
+            return ResponseEntity.status(500)
+                    .body(ApiResponse.error("Account activation failed", e.getMessage(), 500));
+        }
+    }
+
+    /**
+     * Delete user account permanently.
+     * 
+     * This endpoint handles account deletion with:
+     * - User authentication validation
+     * - Account permanent deletion
+     * - Security audit logging
+     * - Data cleanup
+     */
+    @Operation(
+        summary = "Delete Account",
+        description = "Permanently delete the current user's account"
+    )
+    @ApiResponses(value = {
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Account deleted successfully"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "User not authenticated"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "500", description = "Internal server error")
+    })
+    @DeleteMapping("/account")
+    public ResponseEntity<?> deleteAccount(HttpServletRequest httpRequest) {
+        try {
+            Long userId = (Long) httpRequest.getAttribute("userId");
+            String ipAddress = getClientIpAddress(httpRequest);
+
+            if (userId == null) {
+                return ResponseEntity.status(401)
+                        .body(ApiResponse.error("User not authenticated", "User session expired or invalid", 401));
+            }
+
+            log.info("Account deletion request from user: {} IP: {}", userId, ipAddress);
+
+            // Delete account
+            authService.deleteUserAccount(userId, ipAddress);
+
+            return ResponseEntity.ok(ApiResponse.success(null, "Account deleted successfully"));
+
+        } catch (Exception e) {
+            log.error("Account deletion failed: {}", e.getMessage(), e);
+            
+            return ResponseEntity.status(500)
+                    .body(ApiResponse.error("Account deletion failed", e.getMessage(), 500));
         }
     }
 

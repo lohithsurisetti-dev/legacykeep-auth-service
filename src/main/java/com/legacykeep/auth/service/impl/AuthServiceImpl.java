@@ -293,6 +293,57 @@ public class AuthServiceImpl implements AuthService {
         log.info("User logged out successfully: {}", userId);
     }
 
+    @Override
+    @Transactional
+    public JwtTokenDto refreshAccessToken(String refreshToken, String deviceInfo, String ipAddress) {
+        log.info("Processing token refresh request");
+
+        try {
+            // Use JwtService to refresh the token
+            Optional<JwtTokenDto> tokenDtoOpt = jwtService.refreshAccessToken(refreshToken, deviceInfo, ipAddress);
+            
+            if (tokenDtoOpt.isEmpty()) {
+                throw new IllegalArgumentException("Invalid or expired refresh token");
+            }
+
+            JwtTokenDto tokenDto = tokenDtoOpt.get();
+
+            // Log refresh event
+            logAuditEvent(
+                    tokenDto.getUserId(),
+                    null,
+                    "TOKEN_REFRESH",
+                    "AUTHENTICATION",
+                    AuditSeverity.LOW,
+                    "Access token refreshed successfully",
+                    ipAddress,
+                    deviceInfo != null ? deviceInfo : "Unknown",
+                    true
+            );
+
+            log.info("Access token refreshed successfully for user: {}", tokenDto.getUserId());
+            return tokenDto;
+
+        } catch (Exception e) {
+            log.error("Token refresh failed: {}", e.getMessage(), e);
+            
+            // Log failed refresh attempt
+            logAuditEvent(
+                    null,
+                    null,
+                    "TOKEN_REFRESH_FAILED",
+                    "AUTHENTICATION",
+                    AuditSeverity.MEDIUM,
+                    "Token refresh failed: " + e.getMessage(),
+                    ipAddress,
+                    deviceInfo != null ? deviceInfo : "Unknown",
+                    false
+            );
+            
+            throw new IllegalArgumentException("Token refresh failed: " + e.getMessage());
+        }
+    }
+
     // =============================================================================
     // Email Verification
     // =============================================================================
